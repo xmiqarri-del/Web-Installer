@@ -2,6 +2,11 @@
   "version": 1,
   "apps": [
     {
+      "name": "app_organicmaps_26092932.apk",
+      "size": 63797784,
+      "sha256": "654a736d43317084f13560281fe7013f869800610e9d6036b6789d9c9e07f8bc"
+    },
+    {
       "name": "File-manager-v3.8.3.apk",
       "size": 19284953,
       "sha256": "2e0e74887d457d2c67c68045f6c3fba9a218facadeb67b8057d6b1e1389352c2"
