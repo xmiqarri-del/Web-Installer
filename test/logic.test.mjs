@@ -350,3 +350,17 @@ test("auto-fix opens a never-opened app last, after the permission fixes", async
   assert.ok(report.actions.every((a) => a.fixed), JSON.stringify(report.actions.map((a) => [a.id, a.after.state])));
   assert.deepEqual(dev.state.launches, [PKG]);
 });
+
+test("home launcher: component validator accepts package/.Activity and rejects shell tricks", () => {
+  assert.equal(L.isValidComponent("com.example.launcher/.MainActivity"), true);
+  assert.equal(L.isValidComponent("com.example.launcher/com.example.launcher.Home"), true);
+  assert.equal(L.isValidComponent("com.example.launcher"), false);
+  assert.equal(L.isValidComponent("com.example/.A; reboot"), false);
+  assert.equal(L.isValidComponent("com.example/.A && reboot"), false);
+  assert.equal(L.isValidComponent("com.example/$(reboot)"), false);
+  assert.equal(L.isValidComponent(""), false);
+});
+
+test("home launcher: command is cmd package set-home-activity with the validated component", () => {
+  assert.equal(L.cmd.setHome("com.example.launcher/.MainActivity"), "cmd package set-home-activity com.example.launcher/.MainActivity");
+});

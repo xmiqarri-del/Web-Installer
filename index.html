@@ -281,7 +281,22 @@
             <h2>5. أدوات متقدمة (خطيرة)</h2>
             <button class="btn btn-purple action" id="btnGrantAllOverlay">🌟 الظهور فوق الشاشة لكل التطبيقات</button>
             <button class="btn btn-purple action" id="btnStorage">📁 صلاحية كل الملفات لتطبيق محدد</button>
+            <label class="note" for="homeInput">واجهة رئيسية (اختياري): المكوّن بصيغة package/.Activity، مثال: com.example.launcher/.MainActivity</label>
+            <input id="homeInput" class="pkg-input" type="text" dir="ltr" placeholder="com.example.launcher/.MainActivity" autocomplete="off" spellcheck="false">
+            <button class="btn btn-purple action" id="btnSetHome">🏠 تعيين واجهة رئيسية</button>
         </section>
+
+        <details>
+            <summary>📖 دليل الاستخدام</summary>
+            <ol class="note">
+                <li>وصّل الشاشة بكابل بيانات، وفعّل خيارات المطور وتصحيح USB.</li>
+                <li>اضغط «توصيل الشاشة» ثم «السماح دائماً» على شاشة السيارة. يُحفظ المفتاح في هذا المتصفح، فلا تتكرر الموافقة.</li>
+                <li>لتثبيت تطبيق آخر غير Car_DisplayZ: غيّر حقل اسم الحزمة إلى حزمة التطبيق، ثم اختر ملف APK. الصفحة ستطلب تأكيدك إن كان الملف غير المنشور.</li>
+                <li>الصلاحيات لا تُمنح تلقائياً. امنح ما تحتاجه فقط من الأزرار، وكل زر يعرض تحذيره قبل التنفيذ.</li>
+                <li>الواجهة الرئيسية: أدخل المكوّن ثم اضغط «تعيين». قد يرفض النظام ذلك إذا قفلت الشركة المصنّعة الشاشة الرئيسية.</li>
+                <li>إن ظهرت رسالة خطأ، افتح «مفكّك الأخطاء» في الأسفل وألصقها هناك.</li>
+            </ol>
+        </details>
 
         <details>
             <summary>سجل الإصلاحات (محفوظ في هذا المتصفح فقط)</summary>
@@ -338,6 +353,11 @@ function isValidPackageName(name) {
   return typeof name === "string" && /^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$/.test(name);
 }
 
+// "package/.Activity" or "package/package.Activity". Used for the home-launcher command.
+function isValidComponent(name) {
+  return typeof name === "string" && /^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+\/[A-Za-z0-9_.$]+$/.test(name);
+}
+
 function navServiceComponent(pkg) {
   return `${pkg}/${pkg}.nav.NavBarService`;
 }
@@ -360,6 +380,8 @@ const cmd = {
   pmUninstall: (pkg) => `pm uninstall ${pkg}`,
   // Opens the app once, the same way a launcher icon does. That clears the stopped state.
   launchOnce: (pkg) => `monkey -p ${pkg} -c android.intent.category.LAUNCHER 1`,
+  // Makes the given launcher activity the default home screen (Android 10 and newer, shell access).
+  setHome: (component) => `cmd package set-home-activity ${component}`,
 };
 
 // ---------- Parsers ----------
@@ -1627,6 +1649,18 @@ async function grantAllFiles() {
   out(r.ok ? "تم منح الصلاحية." : "لم تنجح الصلاحية. راجع الرسالة أعلاه.", r.ok ? "ok" : "err");
 }
 
+async function setHomeLauncher() {
+  if (!requireConnection()) return;
+  const component = $("homeInput").value.trim();
+  if (!isValidComponent(component)) {
+    out("اكتب المكوّن بصيغة package/.Activity، مثال: com.example.launcher/.MainActivity", "warn");
+    return;
+  }
+  if (!confirm(`سيصبح ${component} الواجهة الرئيسية للشاشة.\nإن كان هذا التطبيق لا يعمل كواجهة، ستظهر مشكلة في الشاشة الرئيسية.\n\nمتابعة؟`)) return;
+  const r = await runShell(cmd.setHome(component));
+  out(r.ok ? "تم تعيين الواجهة الرئيسية." : "لم تنجح. راجع الرسالة أعلاه.", r.ok ? "ok" : "err");
+}
+
 async function sendManual() {
   const input = $("cmdInput");
   const command = input.value.trim();
@@ -1684,6 +1718,7 @@ $("btnListApps").addEventListener("click", () => exclusive(loadUserApps));
 $("btnUninstall").addEventListener("click", () => exclusive(uninstallSelected));
 $("btnGrantAllOverlay").addEventListener("click", () => exclusive(grantOverlayToAll));
 $("btnStorage").addEventListener("click", () => exclusive(grantAllFiles));
+$("btnSetHome").addEventListener("click", () => exclusive(setHomeLauncher));
 $("btnSendCmd").addEventListener("click", sendManual);
 $("cmdInput").addEventListener("keydown", (e) => { if (e.key === "Enter") sendManual(); });
 

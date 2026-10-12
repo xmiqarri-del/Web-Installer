@@ -612,6 +612,18 @@ async function grantAllFiles() {
   out(r.ok ? "تم منح الصلاحية." : "لم تنجح الصلاحية. راجع الرسالة أعلاه.", r.ok ? "ok" : "err");
 }
 
+async function setHomeLauncher() {
+  if (!requireConnection()) return;
+  const component = $("homeInput").value.trim();
+  if (!isValidComponent(component)) {
+    out("اكتب المكوّن بصيغة package/.Activity، مثال: com.example.launcher/.MainActivity", "warn");
+    return;
+  }
+  if (!confirm(`سيصبح ${component} الواجهة الرئيسية للشاشة.\nإن كان هذا التطبيق لا يعمل كواجهة، ستظهر مشكلة في الشاشة الرئيسية.\n\nمتابعة؟`)) return;
+  const r = await runShell(cmd.setHome(component));
+  out(r.ok ? "تم تعيين الواجهة الرئيسية." : "لم تنجح. راجع الرسالة أعلاه.", r.ok ? "ok" : "err");
+}
+
 async function sendManual() {
   const input = $("cmdInput");
   const command = input.value.trim();
@@ -669,6 +681,7 @@ $("btnListApps").addEventListener("click", () => exclusive(loadUserApps));
 $("btnUninstall").addEventListener("click", () => exclusive(uninstallSelected));
 $("btnGrantAllOverlay").addEventListener("click", () => exclusive(grantOverlayToAll));
 $("btnStorage").addEventListener("click", () => exclusive(grantAllFiles));
+$("btnSetHome").addEventListener("click", () => exclusive(setHomeLauncher));
 $("btnSendCmd").addEventListener("click", sendManual);
 $("cmdInput").addEventListener("keydown", (e) => { if (e.key === "Enter") sendManual(); });
 
