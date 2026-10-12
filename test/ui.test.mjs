@@ -242,6 +242,28 @@ test("the install button asks for a connection before it opens the file picker",
   assert.equal(pickerOpened, false);
 }));
 
+test("another app: any APK installs, and its package name is filled in from the device", () => withPage(
+  { fake: { headUnit: {} } },
+  async (page) => {
+    await connectAndWait(page);
+    const otherBytes = Buffer.concat([
+      Buffer.from([0x50, 0x4b, 0x03, 0x04]),
+      Buffer.from("CDZ-FAKE-APK package=com.example.other versionName=2.0 versionCode=20", "latin1"),
+      Buffer.alloc(4096),
+    ]);
+    const apk = await writeFixture("OtherApp.apk", otherBytes);
+
+    page.once("dialog", (d) => d.accept());
+    const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.click("#btnInstallOther")]);
+    await chooser.setFiles(apk);
+    await waitForText(page, "#terminal", "اسم الحزمة: com.example.other");
+    assert.equal(await page.inputValue("#pkgInput"), "com.example.other");
+    const hu = await headUnit(page);
+    assert.ok(hu.userPackages.includes("com.example.other"), "the other app is on the head unit");
+    assert.equal(hu.installed, true, "the DisplayZ state is untouched by installing another app");
+  },
+));
+
 test("a picked APK is copied to the head unit, installed, cleaned up, and its version read back", () => withPage(
   { fake: { headUnit: { versionName: "1.1.5", versionCode: 7 } } },
   async (page) => {
