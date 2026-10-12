@@ -281,7 +281,22 @@
             <h2>5. أدوات متقدمة (خطيرة)</h2>
             <button class="btn btn-purple action" id="btnGrantAllOverlay">🌟 الظهور فوق الشاشة لكل التطبيقات</button>
             <button class="btn btn-purple action" id="btnStorage">📁 صلاحية كل الملفات لتطبيق محدد</button>
+            <label class="note" for="homeInput">واجهة رئيسية (اختياري): المكوّن بصيغة package/.Activity، مثال: com.example.launcher/.MainActivity</label>
+            <input id="homeInput" class="pkg-input" type="text" dir="ltr" placeholder="com.example.launcher/.MainActivity" autocomplete="off" spellcheck="false">
+            <button class="btn btn-purple action" id="btnSetHome">🏠 تعيين واجهة رئيسية</button>
         </section>
+
+        <details>
+            <summary>📖 دليل الاستخدام</summary>
+            <ol class="note">
+                <li>وصّل الشاشة بكابل بيانات، وفعّل خيارات المطور وتصحيح USB.</li>
+                <li>اضغط «توصيل الشاشة» ثم «السماح دائماً» على شاشة السيارة. يُحفظ المفتاح في هذا المتصفح، فلا تتكرر الموافقة.</li>
+                <li>لتثبيت تطبيق آخر غير Car_DisplayZ: غيّر حقل اسم الحزمة إلى حزمة التطبيق، ثم اختر ملف APK. الصفحة ستطلب تأكيدك إن كان الملف غير المنشور.</li>
+                <li>الصلاحيات لا تُمنح تلقائياً. امنح ما تحتاجه فقط من الأزرار، وكل زر يعرض تحذيره قبل التنفيذ.</li>
+                <li>الواجهة الرئيسية: أدخل المكوّن ثم اضغط «تعيين». قد يرفض النظام ذلك إذا قفلت الشركة المصنّعة الشاشة الرئيسية.</li>
+                <li>إن ظهرت رسالة خطأ، افتح «مفكّك الأخطاء» في الأسفل وألصقها هناك.</li>
+            </ol>
+        </details>
 
         <details>
             <summary>سجل الإصلاحات (محفوظ في هذا المتصفح فقط)</summary>
