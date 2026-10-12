@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Car_DisplayZ WebInstaller 3.1</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --panel: #1e293b;
+            --panel-2: #0f172a;
+            --text: #f8fafc;
+            --muted: #94a3b8;
+            --accent: #3b82f6;
+            --success: #10b981;
+            --warn: #f59e0b;
+            --danger: #ef4444;
+            --border: #334155;
+            --terminal-text: #00ff00;
+        }
+        [hidden] { display: none !important; }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 16px;
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        h1 { margin: 0; font-size: 20px; color: var(--accent); text-align: center; }
+        h2 { margin: 0; font-size: 15px; color: #cbd5e1; }
+        .version { text-align: center; color: var(--muted); font-size: 13px; }
+
+        .sidebar {
+            flex: 1 1 320px;
+            max-width: 460px;
+            min-width: min(300px, 100%);
+            max-height: calc(100vh - 32px);
+            overflow-y: auto;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3);
+        }
+        .main {
+            flex: 2 1 480px;
+            min-width: min(360px, 100%);
+            min-height: 560px;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3);
+        }
+        .section { border-top: 1px solid var(--border); padding-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+        .section:first-of-type { border-top: none; padding-top: 0; }
+
+        .btn {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+        .btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+        .btn:active:not(:disabled) { transform: translateY(1px); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-success { background: var(--success); }
+        .btn-danger { background: var(--danger); }
+        .btn-outline { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
+        .btn-outline:hover:not(:disabled) { background: var(--accent); color: #fff; }
+        .btn-muted { background: #475569; }
+        .btn-purple { background: #8b5cf6; }
+        .btn-small { padding: 7px 12px; font-size: 13px; align-self: flex-start; }
+
+        .status-badge {
+            align-self: center;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+            background: var(--danger);
+            color: #fff;
+        }
+        .status-badge.connected { background: var(--success); }
+
+        .note { margin: 0; font-size: 13px; line-height: 1.6; padding: 8px 10px; border-radius: 8px; background: var(--panel-2); }
+        .note.fail { border-right: 3px solid var(--danger); }
+        .note.warn { border-right: 3px solid var(--warn); }
+
+        .pkg-input {
+            width: 100%;
+            background: var(--panel-2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: Consolas, 'Courier New', monospace;
+            font-size: 14px;
+            direction: ltr;
+        }
+        .summary { font-size: 13px; color: var(--muted); text-align: center; }
+        .main-head { display: flex; flex-direction: column; gap: 4px; }
+
+        .checks {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+            gap: 10px;
+            padding: 2px;
+        }
+        .card {
+            background: var(--panel-2);
+            border: 1px solid var(--border);
+            border-right: 4px solid #475569;
+            border-radius: 10px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .card.st-ok { border-right-color: var(--success); }
+        .card.st-fail { border-right-color: var(--danger); }
+        .card.st-na { border-right-color: #475569; opacity: 0.75; }
+        .card.st-info, .card.st-error { border-right-color: var(--warn); }
+        .card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+        .card-head strong { font-size: 14px; }
+        .badge { font-size: 12px; white-space: nowrap; }
+        .card-value { font-family: Consolas, 'Courier New', monospace; direction: ltr; text-align: left; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+        .card-detail { margin: 0; font-size: 13px; line-height: 1.6; color: #cbd5e1; overflow-wrap: anywhere; }
+
+        .decoder { display: flex; flex-direction: column; gap: 8px; }
+        textarea {
+            width: 100%;
+            min-height: 70px;
+            resize: vertical;
+            background: var(--panel-2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: Consolas, 'Courier New', monospace;
+            font-size: 13px;
+            direction: ltr;
+        }
+        #decoderOut { display: flex; flex-direction: column; gap: 8px; max-height: 190px; overflow-y: auto; font-size: 13px; }
+        .steps { margin: 0; padding-right: 20px; line-height: 1.7; }
+
+        .terminal {
+            flex: 1;
+            min-height: 220px;
+            background: #000;
+            color: var(--terminal-text);
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-family: Consolas, 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.55;
+            direction: ltr;
+            text-align: left;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        /* Each line takes its own direction: Arabic lines read right-to-left, command lines left-to-right. */
+        .terminal .line { min-height: 1em; unicode-bidi: plaintext; text-align: left; }
+        .terminal .cmd { color: #fbbf24; }
+        .terminal .err { color: #f87171; }
+        .terminal .warn { color: #fbbf24; }
+        .terminal .hint { color: #93c5fd; }
+        .terminal .ok { color: #34d399; }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            direction: ltr;
+            background: var(--panel-2);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        .input-group span { color: var(--warn); font-family: monospace; align-self: center; font-weight: bold; padding-left: 6px; }
+        .input-group input {
+            flex: 1;
+            min-width: 0;
+            background: transparent;
+            border: none;
+            color: var(--terminal-text);
+            font-family: monospace;
+            font-size: 14px;
+            outline: none;
+        }
+        .input-group button { background: var(--accent); color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .input-group button:disabled { opacity: 0.5; }
+
+        details { font-size: 13px; color: var(--muted); }
+        details summary { cursor: pointer; }
+        #fixLog { margin: 8px 0 0; padding-right: 18px; max-height: 160px; overflow-y: auto; direction: ltr; text-align: left; font-family: Consolas, 'Courier New', monospace; font-size: 12px; }
+
+        @media (max-width: 760px) {
+            body { padding: 16px; }
+            .sidebar, .main { flex-basis: 100%; min-width: 0; max-width: 100%; max-height: none; }
+            .main { min-height: 0; }
+            .terminal { min-height: 220px; }
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <h1>Car_DisplayZ WebInstaller</h1>
+        <div class="version">الإصدار 3.1 | Car_DisplayZ 1.1.6 | Jetour G700</div>
+
+        <div class="status-badge" id="statusBadge">غير متصل ❌</div>
+        <button class="btn btn-success action" id="btnConnect">🔌 توصيل الشاشة (WebUSB)</button>
+        <button class="btn btn-danger action" id="btnDisconnect" hidden>❌ قطع الاتصال</button>
+
+        <div id="envNotes"></div>
+
+        <section class="section">
+            <h2>اسم حزمة التطبيق</h2>
+            <input id="pkgInput" class="pkg-input" type="text" value="com.xmiqarri.cardisplayz" autocomplete="off" spellcheck="false">
+        </section>
+
+        <section class="section">
+            <h2>1. تثبيت التطبيق على الشاشة (بدون adb)</h2>
+            <p class="note">نزّل ملف APK من GitHub على هذا الكمبيوتر، ثم اضغط زر التثبيت واختر الملف. الأداة تنقله إلى الشاشة وتثبّته، وتتحقق من الإصدار بعد ذلك.</p>
+            <a class="btn btn-outline" id="apkLink" href="https://github.com/xmiqarri-del/Car_DisplayZ/releases/download/v1.1.6/Car_DisplayZ-v1.1.6.apk" target="_blank" rel="noopener">⬇️ تنزيل APK الإصدار 1.1.6</a>
+            <button class="btn btn-success action" id="btnInstall">📲 تثبيت ملف APK على الشاشة</button>
+            <input type="file" id="apkFile" accept=".apk,application/vnd.android.package-archive" hidden>
+        </section>
+
+        <section class="section">
+            <h2>2. تشخيص الصلاحيات وإصلاحها</h2>
+            <button class="btn action" id="btnDoctor">🩺 تشخيص الصلاحيات</button>
+            <button class="btn btn-success action" id="btnAutoFix">🛠️ إصلاح تلقائي لكل المشاكل</button>
+        </section>
+
+        <section class="section">
+            <h2>3. أدوات</h2>
+            <button class="btn btn-muted action" id="btnListApps">📦 التطبيقات المثبتة (من المستخدم)</button>
+            <button class="btn btn-outline" id="btnBat">📥 سكربت BAT (يحتاج adb.exe على الكمبيوتر)</button>
+        </section>
+
+        <section class="section">
+            <h2>4. أدوات متقدمة (خطيرة)</h2>
+            <button class="btn btn-purple action" id="btnGrantAllOverlay">🌟 الظهور فوق الشاشة لكل التطبيقات</button>
+            <button class="btn btn-purple action" id="btnStorage">📁 صلاحية كل الملفات لتطبيق محدد</button>
+        </section>
+
+        <details>
+            <summary>سجل الإصلاحات (محفوظ في هذا المتصفح فقط)</summary>
+            <ul id="fixLog"></ul>
+        </details>
+    </aside>
+
+    <main class="main">
+        <div class="main-head">
+            <h1>لوحة الصلاحيات</h1>
+            <div class="summary" id="summary">لم يُجرَ التشخيص بعد.</div>
+        </div>
+        <div class="checks" id="checks"></div>
+
+        <section class="decoder">
+            <h2>🔍 مفكّك الأخطاء: الصق رسالة الخطأ هنا</h2>
+            <textarea id="errInput" spellcheck="false" placeholder="مثال: Failure [INSTALL_FAILED_UPDATE_INCOMPATIBLE: ...]"></textarea>
+            <button class="btn btn-small" id="btnDecode">تحليل الرسالة</button>
+            <div id="decoderOut"></div>
+        </section>
+
+        <div class="terminal" id="terminal"></div>
+        <div class="input-group">
+            <span>adb shell</span>
+            <input type="text" id="cmdInput" placeholder="أمر اختياري، مثال: getprop ro.build.version.release" autocomplete="off" spellcheck="false">
+            <button id="btnSendCmd" class="action">إرسال ↵</button>
+        </div>
+    </main>
+
+    <script type="module">
+/*__BUILD__*/
+    </script>
+</body>
+</html>
