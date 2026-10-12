@@ -238,7 +238,7 @@
 
     <aside class="sidebar">
         <h1>Car_DisplayZ WebInstaller</h1>
-        <div class="version">الإصدار 3.1 | Car_DisplayZ 1.1.6 | Jetour G700</div>
+        <div class="version">الإصدار 3.1 | Car_DisplayZ 1.1.7 | Jetour G700</div>
 
         <div class="status-badge" id="statusBadge">غير متصل ❌</div>
         <button class="btn btn-success action" id="btnConnect">🔌 توصيل الشاشة (WebUSB)</button>
@@ -254,7 +254,7 @@
         <section class="section">
             <h2>1. تثبيت التطبيق على الشاشة (بدون adb)</h2>
             <p class="note">نزّل ملف APK من GitHub على هذا الكمبيوتر، ثم اضغط زر التثبيت واختر الملف. الأداة تنقله إلى الشاشة وتثبّته، وتتحقق من الإصدار بعد ذلك.</p>
-            <a class="btn btn-outline" id="apkLink" href="https://github.com/xmiqarri-del/Car_DisplayZ/releases/download/v1.1.6/Car_DisplayZ-v1.1.6.apk" target="_blank" rel="noopener">⬇️ تنزيل APK الإصدار 1.1.6</a>
+            <a class="btn btn-outline" id="apkLink" href="https://github.com/xmiqarri-del/Car_DisplayZ/releases/download/v1.1.7/Car_DisplayZ-v1.1.7.apk" target="_blank" rel="noopener">⬇️ تنزيل APK الإصدار 1.1.7</a>
             <button class="btn btn-success action" id="btnInstall">📲 تثبيت ملف APK على الشاشة</button>
             <input type="file" id="apkFile" accept=".apk,application/vnd.android.package-archive" hidden>
         </section>
@@ -317,16 +317,16 @@
 // and inlines this file into the single HTML page.
 
 const DEFAULT_PACKAGE = "com.xmiqarri.cardisplayz";
-const APP_VERSION = "1.1.6";
+const APP_VERSION = "1.1.7";
 const MIN_SDK = 30;      // Android 11 (minSdk in app/build.gradle.kts)
 const NOTIFY_SDK = 33;   // POST_NOTIFICATIONS is a runtime permission from Android 13
 
 // The official APK of the release above. The values come from the release's update.json,
 // and the APK itself was downloaded and its SHA-256 checked against them.
-const EXPECTED_VERSION_CODE = 8;
+const EXPECTED_VERSION_CODE = 9;
 const EXPECTED_APK_NAME = `Car_DisplayZ-v${APP_VERSION}.apk`;
-const EXPECTED_APK_BYTES = 7009149;
-const EXPECTED_APK_SHA256 = "91532fd903f63414ba365e8406b1ee84d28843c38931b070c89a10a8b398ff4d";
+const EXPECTED_APK_BYTES = 7009813;
+const EXPECTED_APK_SHA256 = "b5b1f6acc5c9f300f7451522cd0e0ffd548da17d19575c4d59652c888618730a";
 const RELEASE_APK_URL = `https://github.com/xmiqarri-del/Car_DisplayZ/releases/download/v${APP_VERSION}/${EXPECTED_APK_NAME}`;
 const MAX_APK_BYTES = 200 * 1024 * 1024;  // same limit as the app's own updater
 // Fixed scratch path on the head unit for the APK being installed (never built from user input).
@@ -442,7 +442,7 @@ function parsePmResult(output) {
   return { ok: false, code: m ? m[1] : null };
 }
 
-// From `dumpsys package`: "    versionCode=8 minSdk=30 ..." and "    versionName=1.1.6".
+// From `dumpsys package`: "    versionCode=9 minSdk=30 ..." and "    versionName=1.1.7".
 function parseVersion(dumpsysOutput) {
   const text = String(dumpsysOutput ?? "");
   const name = /^\s*versionName=(\S+)/m.exec(text);
@@ -896,7 +896,7 @@ const ERROR_RULES = [
     title: "التطبيق المثبّت لا يطلب هذه الصلاحية",
     steps: [
       "الصلاحية لا تُمنح إلا إذا أعلنها التطبيق في AndroidManifest.xml، فلا يمكن منحها من الكمبيوتر.",
-      "ثبّت الملف من القسم 1 في القائمة الجانبية (الإصدار 1.1.6 يعلن صلاحية الإشعارات)، ثم أعد التشخيص.",
+      "ثبّت الملف من القسم 1 في القائمة الجانبية (الإصدار 1.1.7 يعلن صلاحية الإشعارات)، ثم أعد التشخيص.",
     ],
   },
   {
