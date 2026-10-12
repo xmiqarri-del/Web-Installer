@@ -69,6 +69,8 @@ function setConnected(on) {
   const badge = $("statusBadge");
   badge.textContent = on ? "متصل بالشاشة ✅" : "غير متصل ❌";
   badge.classList.toggle("connected", on);
+  const connectionHelp = $("connectionHelp");
+  if (connectionHelp) connectionHelp.textContent = on ? "تم إنشاء اتصال USB آمن بالشاشة" : "لا يوجد جهاز متصل";
   $("btnConnect").hidden = on;
   $("btnDisconnect").hidden = !on;
 }
@@ -665,6 +667,51 @@ function renderEnvironment() {
     box.append(p);
   }
 }
+
+let engineerClockSignature = "";
+let engineerNextChangeAt = 0;
+let engineerLastClockMs = null;
+
+function renderEngineerCode() {
+  const firmware = ENGINEER_FIRMWARES.find((entry) => entry.id === $("engineerVersion").value);
+  const region = ENGINEER_REGIONS.find((entry) => entry.id === $("engineerRegion").value);
+  const offsetHours = Number($("engineerClockOffset").value);
+  if (!firmware || !region || !Number.isFinite(offsetHours)) return;
+
+  try {
+    const clockMs = Date.now() + offsetHours * 3_600_000;
+    const parts = getCarTimeParts(region.timeZone, clockMs);
+    const code = generateEngineerCode({ mm: parts.month, dd: parts.day, hh: parts.hour, seed: firmware.seed });
+    const clockSignature = `${region.timeZone}|${offsetHours}|${parts.date}|${parts.hour}`;
+    if (clockSignature !== engineerClockSignature || engineerLastClockMs === null || clockMs < engineerLastClockMs || clockMs >= engineerNextChangeAt) {
+      engineerClockSignature = clockSignature;
+      engineerNextChangeAt = nextCodeChangeAt(region.timeZone, clockMs);
+    }
+    engineerLastClockMs = clockMs;
+    $("engineerCode").textContent = code;
+    $("engineerCountdown").textContent = formatCountdown(Math.max(0, Math.ceil((engineerNextChangeAt - clockMs) / 1000)));
+    const offsetLabel = offsetHours ? `، ${offsetHours > 0 ? "+" : ""}${offsetHours}h` : "";
+    $("engineerCarTime").textContent = `${parts.date} · ${String(parts.hour).padStart(2, "0")}:${String(parts.minute).padStart(2, "0")} (${region.timeZone}${offsetLabel})`;
+    $("engineerDialCode").textContent = engineerDialCode(firmware, code);
+    $("engineerDialLabel").textContent = firmware.dynamicDial
+      ? "أدخل كود الاتصال الديناميكي في تطبيق الهاتف بالسيارة"
+      : "أدخل هذا الرمز في قائمة ADB بالسيارة";
+    $("engineerVersionHint").hidden = !firmware.dynamicDial;
+    if (firmware.dynamicDial) {
+      $("engineerVersionHint").textContent = "في هذا النطاق، كود الاتصال والرمز الحالي واحد؛ يتغيران مع بداية كل ساعة بتوقيت السيارة.";
+    }
+  } catch {
+    $("engineerCode").textContent = "······";
+    $("engineerCountdown").textContent = "--:--";
+    $("engineerCarTime").textContent = "تعذّر حساب الوقت؛ اختر منطقة مدعومة.";
+  }
+}
+
+for (const id of ["engineerVersion", "engineerRegion", "engineerClockOffset"]) {
+  $(id).addEventListener("change", renderEngineerCode);
+}
+renderEngineerCode();
+setInterval(renderEngineerCode, 1000);
 
 // The file picker is opened by the install button. The input is reset as soon as a file is chosen,
 // so picking the same file again still fires "change".
