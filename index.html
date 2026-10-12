@@ -1,0 +1,1573 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Car_DisplayZ WebInstaller 3.1</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --panel: #1e293b;
+            --panel-2: #0f172a;
+            --text: #f8fafc;
+            --muted: #94a3b8;
+            --accent: #3b82f6;
+            --success: #10b981;
+            --warn: #f59e0b;
+            --danger: #ef4444;
+            --border: #334155;
+            --terminal-text: #00ff00;
+        }
+        [hidden] { display: none !important; }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 16px;
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        h1 { margin: 0; font-size: 20px; color: var(--accent); text-align: center; }
+        h2 { margin: 0; font-size: 15px; color: #cbd5e1; }
+        .version { text-align: center; color: var(--muted); font-size: 13px; }
+
+        .sidebar {
+            flex: 1 1 320px;
+            max-width: 460px;
+            min-width: min(300px, 100%);
+            max-height: calc(100vh - 32px);
+            overflow-y: auto;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3);
+        }
+        .main {
+            flex: 2 1 480px;
+            min-width: min(360px, 100%);
+            min-height: 560px;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3);
+        }
+        .section { border-top: 1px solid var(--border); padding-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+        .section:first-of-type { border-top: none; padding-top: 0; }
+
+        .btn {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+        .btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+        .btn:active:not(:disabled) { transform: translateY(1px); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-success { background: var(--success); }
+        .btn-danger { background: var(--danger); }
+        .btn-outline { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
+        .btn-outline:hover:not(:disabled) { background: var(--accent); color: #fff; }
+        .btn-muted { background: #475569; }
+        .btn-purple { background: #8b5cf6; }
+        .btn-small { padding: 7px 12px; font-size: 13px; align-self: flex-start; }
+
+        .status-badge {
+            align-self: center;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+            background: var(--danger);
+            color: #fff;
+        }
+        .status-badge.connected { background: var(--success); }
+
+        .note { margin: 0; font-size: 13px; line-height: 1.6; padding: 8px 10px; border-radius: 8px; background: var(--panel-2); }
+        .note.fail { border-right: 3px solid var(--danger); }
+        .note.warn { border-right: 3px solid var(--warn); }
+
+        .pkg-input {
+            width: 100%;
+            background: var(--panel-2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: Consolas, 'Courier New', monospace;
+            font-size: 14px;
+            direction: ltr;
+        }
+        .summary { font-size: 13px; color: var(--muted); text-align: center; }
+        .main-head { display: flex; flex-direction: column; gap: 4px; }
+
+        .checks {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+            gap: 10px;
+            padding: 2px;
+        }
+        .card {
+            background: var(--panel-2);
+            border: 1px solid var(--border);
+            border-right: 4px solid #475569;
+            border-radius: 10px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .card.st-ok { border-right-color: var(--success); }
+        .card.st-fail { border-right-color: var(--danger); }
+        .card.st-na { border-right-color: #475569; opacity: 0.75; }
+        .card.st-info, .card.st-error { border-right-color: var(--warn); }
+        .card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+        .card-head strong { font-size: 14px; }
+        .badge { font-size: 12px; white-space: nowrap; }
+        .card-value { font-family: Consolas, 'Courier New', monospace; direction: ltr; text-align: left; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+        .card-detail { margin: 0; font-size: 13px; line-height: 1.6; color: #cbd5e1; overflow-wrap: anywhere; }
+
+        .decoder { display: flex; flex-direction: column; gap: 8px; }
+        textarea {
+            width: 100%;
+            min-height: 70px;
+            resize: vertical;
+            background: var(--panel-2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: Consolas, 'Courier New', monospace;
+            font-size: 13px;
+            direction: ltr;
+        }
+        #decoderOut { display: flex; flex-direction: column; gap: 8px; max-height: 190px; overflow-y: auto; font-size: 13px; }
+        .steps { margin: 0; padding-right: 20px; line-height: 1.7; }
+
+        .terminal {
+            flex: 1;
+            min-height: 220px;
+            background: #000;
+            color: var(--terminal-text);
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-family: Consolas, 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.55;
+            direction: ltr;
+            text-align: left;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        /* Each line takes its own direction: Arabic lines read right-to-left, command lines left-to-right. */
+        .terminal .line { min-height: 1em; unicode-bidi: plaintext; text-align: left; }
+        .terminal .cmd { color: #fbbf24; }
+        .terminal .err { color: #f87171; }
+        .terminal .warn { color: #fbbf24; }
+        .terminal .hint { color: #93c5fd; }
+        .terminal .ok { color: #34d399; }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            direction: ltr;
+            background: var(--panel-2);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        .input-group span { color: var(--warn); font-family: monospace; align-self: center; font-weight: bold; padding-left: 6px; }
+        .input-group input {
+            flex: 1;
+            min-width: 0;
+            background: transparent;
+            border: none;
+            color: var(--terminal-text);
+            font-family: monospace;
+            font-size: 14px;
+            outline: none;
+        }
+        .input-group button { background: var(--accent); color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .input-group button:disabled { opacity: 0.5; }
+
+        details { font-size: 13px; color: var(--muted); }
+        details summary { cursor: pointer; }
+        #fixLog { margin: 8px 0 0; padding-right: 18px; max-height: 160px; overflow-y: auto; direction: ltr; text-align: left; font-family: Consolas, 'Courier New', monospace; font-size: 12px; }
+
+        @media (max-width: 760px) {
+            body { padding: 16px; }
+            .sidebar, .main { flex-basis: 100%; min-width: 0; max-width: 100%; max-height: none; }
+            .main { min-height: 0; }
+            .terminal { min-height: 220px; }
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <h1>Car_DisplayZ WebInstaller</h1>
+        <div class="version">الإصدار 3.1 | Car_DisplayZ 1.1.6 | Jetour G700</div>
+
+        <div class="status-badge" id="statusBadge">غير متصل ❌</div>
+        <button class="btn btn-success action" id="btnConnect">🔌 توصيل الشاشة (WebUSB)</button>
+        <button class="btn btn-danger action" id="btnDisconnect" hidden>❌ قطع الاتصال</button>
+
+        <div id="envNotes"></div>
+
+        <section class="section">
+            <h2>اسم حزمة التطبيق</h2>
+            <input id="pkgInput" class="pkg-input" type="text" value="com.xmiqarri.cardisplayz" autocomplete="off" spellcheck="false">
+        </section>
+
+        <section class="section">
+            <h2>1. تثبيت التطبيق على الشاشة (بدون adb)</h2>
+            <p class="note">نزّل ملف APK من GitHub على هذا الكمبيوتر، ثم اضغط زر التثبيت واختر الملف. الأداة تنقله إلى الشاشة وتثبّته، وتتحقق من الإصدار بعد ذلك.</p>
+            <a class="btn btn-outline" id="apkLink" href="https://github.com/xmiqarri-del/Car_DisplayZ/releases/download/v1.1.6/Car_DisplayZ-v1.1.6.apk" target="_blank" rel="noopener">⬇️ تنزيل APK الإصدار 1.1.6</a>
+            <button class="btn btn-success action" id="btnInstall">📲 تثبيت ملف APK على الشاشة</button>
+            <input type="file" id="apkFile" accept=".apk,application/vnd.android.package-archive" hidden>
+        </section>
+
+        <section class="section">
+            <h2>2. تشخيص الصلاحيات وإصلاحها</h2>
+            <button class="btn action" id="btnDoctor">🩺 تشخيص الصلاحيات</button>
+            <button class="btn btn-success action" id="btnAutoFix">🛠️ إصلاح تلقائي لكل المشاكل</button>
+        </section>
+
+        <section class="section">
+            <h2>3. أدوات</h2>
+            <button class="btn btn-muted action" id="btnListApps">📦 التطبيقات المثبتة (من المستخدم)</button>
+            <button class="btn btn-outline" id="btnBat">📥 سكربت BAT (يحتاج adb.exe على الكمبيوتر)</button>
+        </section>
+
+        <section class="section">
+            <h2>4. أدوات متقدمة (خطيرة)</h2>
+            <button class="btn btn-purple action" id="btnGrantAllOverlay">🌟 الظهور فوق الشاشة لكل التطبيقات</button>
+            <button class="btn btn-purple action" id="btnStorage">📁 صلاحية كل الملفات لتطبيق محدد</button>
+        </section>
+
+        <details>
+            <summary>سجل الإصلاحات (محفوظ في هذا المتصفح فقط)</summary>
+            <ul id="fixLog"></ul>
+        </details>
+    </aside>
+
+    <main class="main">
+        <div class="main-head">
+            <h1>لوحة الصلاحيات</h1>
+            <div class="summary" id="summary">لم يُجرَ التشخيص بعد.</div>
+        </div>
+        <div class="checks" id="checks"></div>
+
+        <section class="decoder">
+            <h2>🔍 مفكّك الأخطاء: الصق رسالة الخطأ هنا</h2>
+            <textarea id="errInput" spellcheck="false" placeholder="مثال: Failure [INSTALL_FAILED_UPDATE_INCOMPATIBLE: ...]"></textarea>
+            <button class="btn btn-small" id="btnDecode">تحليل الرسالة</button>
+            <div id="decoderOut"></div>
+        </section>
+
+        <div class="terminal" id="terminal"></div>
+        <div class="input-group">
+            <span>adb shell</span>
+            <input type="text" id="cmdInput" placeholder="أمر اختياري، مثال: getprop ro.build.version.release" autocomplete="off" spellcheck="false">
+            <button id="btnSendCmd" class="action">إرسال ↵</button>
+        </div>
+    </main>
+
+    <script type="module">
+// Car_DisplayZ WebInstaller Pro v3 - pure logic (no DOM, no network).
+// Everything here is testable in Node. The build step strips the `export` keywords
+// and inlines this file into the single HTML page.
+
+const DEFAULT_PACKAGE = "com.xmiqarri.cardisplayz";
+const APP_VERSION = "1.1.6";
+const MIN_SDK = 30;      // Android 11 (minSdk in app/build.gradle.kts)
+const NOTIFY_SDK = 33;   // POST_NOTIFICATIONS is a runtime permission from Android 13
+
+// The official APK of the release above. The values come from the release's update.json,
+// and the APK itself was downloaded and its SHA-256 checked against them.
+const EXPECTED_VERSION_CODE = 8;
+const EXPECTED_APK_NAME = `Car_DisplayZ-v${APP_VERSION}.apk`;
+const EXPECTED_APK_BYTES = 7009149;
+const EXPECTED_APK_SHA256 = "91532fd903f63414ba365e8406b1ee84d28843c38931b070c89a10a8b398ff4d";
+const RELEASE_APK_URL = `https://github.com/xmiqarri-del/Car_DisplayZ/releases/download/v${APP_VERSION}/${EXPECTED_APK_NAME}`;
+const MAX_APK_BYTES = 200 * 1024 * 1024;  // same limit as the app's own updater
+// Fixed scratch path on the head unit for the APK being installed (never built from user input).
+const APK_TEMP_PATH = "/data/local/tmp/webinstaller_install.apk";
+
+// ---------- Validation and command builders ----------
+
+function isValidPackageName(name) {
+  return typeof name === "string" && /^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$/.test(name);
+}
+
+function navServiceComponent(pkg) {
+  return `${pkg}/${pkg}.nav.NavBarService`;
+}
+
+const cmd = {
+  sdk: () => "getprop ro.build.version.sdk",
+  model: () => "getprop ro.product.model",
+  pmPath: (pkg) => `pm path ${pkg}`,
+  appopsGet: (pkg, op) => `appops get ${pkg} ${op}`,
+  appopsSet: (pkg, op, mode = "allow") => `appops set ${pkg} ${op} ${mode}`,
+  settingsGet: (key) => `settings get secure ${key}`,
+  settingsPut: (key, value) => `settings put secure ${key} "${value}"`,
+  pmGrant: (pkg, permission) => `pm grant ${pkg} ${permission}`,
+  dumpsysPackage: (pkg) => `dumpsys package ${pkg}`,
+  whitelistList: () => "dumpsys deviceidle whitelist",
+  whitelistAdd: (pkg) => `dumpsys deviceidle whitelist +${pkg}`,
+  listUserPackages: () => "pm list packages -3",
+  pmInstall: (path) => `pm install -r ${path}`,
+  rmFile: (path) => `rm -f ${path}`,
+};
+
+// ---------- Parsers ----------
+
+// "SYSTEM_ALERT_WINDOW: allow; time=+1d" -> "allow". Unknown output -> "unknown".
+function parseAppOp(output) {
+  const m = /(?:^|:\s*)(allow|ignore|deny|default|foreground|errored)\b/im.exec(String(output ?? ""));
+  return m ? m[1].toLowerCase() : "unknown";
+}
+
+// `settings get` prints "null" when the key is unset.
+function parseSettingValue(output) {
+  const v = String(output ?? "").replace(/\r/g, "").trim();
+  return v === "" ? "null" : v;
+}
+
+function parseSdk(output) {
+  const n = parseInt(String(output ?? "").trim(), 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+// "android.permission.POST_NOTIFICATIONS: granted=true" -> true. Not found -> null.
+function parseGranted(dumpsysOutput, permission) {
+  const escaped = permission.replace(/\./g, "\\.");
+  const m = new RegExp(`${escaped}:\\s*granted=(true|false)`).exec(String(dumpsysOutput ?? ""));
+  return m ? m[1] === "true" : null;
+}
+
+// Whitelist lines look like "user,com.example,10123" or "com.example,10123".
+function isWhitelisted(deviceIdleOutput, pkg) {
+  return String(deviceIdleOutput ?? "").split(/[\s,]+/).includes(pkg);
+}
+
+// `pm path com.x` prints "package:/data/app/..." when installed.
+function parsePmPath(output) {
+  const m = /package:(\S+)/.exec(String(output ?? ""));
+  return m ? m[1] : null;
+}
+
+// ---------- Installing a picked APK (copy to the head unit, then pm install) ----------
+
+// Checks the picked file before anything is sent to the head unit. `head` holds its first bytes.
+function checkApkFile({ name = "", size = 0, head = new Uint8Array(0) }) {
+  if (!/\.apk$/i.test(String(name))) return { ok: false, reason: "الملف ليس بامتداد .apk." };
+  if (!(size > 0)) return { ok: false, reason: "الملف فارغ." };
+  if (size > MAX_APK_BYTES) return { ok: false, reason: `الملف أكبر من ${MAX_APK_BYTES / 1048576} ميغابايت.` };
+  const isZip = head.length >= 4 && head[0] === 0x50 && head[1] === 0x4b && head[2] === 0x03 && head[3] === 0x04;
+  if (!isZip) return { ok: false, reason: "الملف لا يبدأ بترويسة ZIP، فليس APK صالحاً." };
+  return { ok: true, reason: "" };
+}
+
+// True only for the official release file: size and SHA-256 both match. sha256 is null when it could not be computed.
+function isOfficialApk({ size, sha256 }) {
+  return size === EXPECTED_APK_BYTES && sha256 === EXPECTED_APK_SHA256;
+}
+
+// `pm install` prints "Success", or "Failure [INSTALL_FAILED_...: reason]".
+function parseInstallResult(output) {
+  const text = String(output ?? "");
+  if (/^\s*Success\s*$/m.test(text)) return { ok: true, code: null };
+  const m = /Failure\s*\[\s*([A-Z_]+)/.exec(text);
+  return { ok: false, code: m ? m[1] : null };
+}
+
+// From `dumpsys package`: "    versionCode=8 minSdk=30 ..." and "    versionName=1.1.6".
+function parseVersion(dumpsysOutput) {
+  const text = String(dumpsysOutput ?? "");
+  const name = /^\s*versionName=(\S+)/m.exec(text);
+  const code = /^\s*versionCode=(\d+)/m.exec(text);
+  if (!name && !code) return null;
+  return {
+    versionName: name ? name[1] : null,
+    versionCode: code ? Number(code[1]) : null,
+  };
+}
+
+// Compares the installed version with the release this page installs.
+function versionStatus(info) {
+  if (!info || info.versionName === null) {
+    return { state: "info", value: "غير معروف", detail: "تعذّر قراءة رقم الإصدار من معلومات التطبيق." };
+  }
+  if (info.versionCode === null) {
+    const value = info.versionName;
+    return value === APP_VERSION
+      ? { state: "ok", value, detail: `الإصدار ${APP_VERSION} هو الذي تنصّبه هذه الصفحة.` }
+      : { state: "info", value, detail: `هذه الصفحة تنصّب الإصدار ${APP_VERSION}.` };
+  }
+  const value = `${info.versionName} (${info.versionCode})`;
+  if (info.versionCode === EXPECTED_VERSION_CODE) {
+    return { state: "ok", value, detail: `مطابق للإصدار ${APP_VERSION} الذي تنصّبه هذه الصفحة.` };
+  }
+  if (info.versionCode < EXPECTED_VERSION_CODE) {
+    return { state: "fail", value, detail: `أقدم من الإصدار ${APP_VERSION}. ثبّت الملف من القسم 1 في القائمة الجانبية.` };
+  }
+  return { state: "info", value, detail: `أحدث من الإصدار ${APP_VERSION} الذي تعرفه هذه الصفحة.` };
+}
+
+// ---------- Accessibility list handling (never overwrites other services) ----------
+
+function accessibilityServices(settingValue) {
+  const v = parseSettingValue(settingValue);
+  return v === "null" ? [] : v.split(":").map((s) => s.trim()).filter(Boolean);
+}
+
+function hasNavService(settingValue, pkg) {
+  return accessibilityServices(settingValue).some((c) => c.startsWith(`${pkg}/`) && /NavBarService/.test(c));
+}
+
+function mergeAccessibilityServices(settingValue, pkg) {
+  const list = accessibilityServices(settingValue);
+  if (list.some((c) => c.startsWith(`${pkg}/`) && /NavBarService/.test(c))) return list.join(":");
+  return [...list, navServiceComponent(pkg)].join(":");
+}
+
+// ---------- Permission checks ----------
+// ctx = { pkg, run(command, opts) -> {ok, exitCode, stdout, stderr, error}, log(line) }
+
+const quietRun = (ctx, command) => ctx.run(command, { quiet: true });
+
+const CHECKS = [
+  {
+    id: "sdk",
+    title: "إصدار أندرويد",
+    async check(ctx) {
+      const sdk = parseSdk((await quietRun(ctx, cmd.sdk())).stdout);
+      const model = (await quietRun(ctx, cmd.model())).stdout.trim() || "غير معروف";
+      if (sdk === null) return { state: "info", value: "غير معروف", detail: `الموديل: ${model}. تعذّر قراءة الإصدار.` };
+      if (sdk < MIN_SDK) {
+        return {
+          state: "fail",
+          value: `SDK ${sdk}`,
+          detail: `الموديل: ${model}. التطبيق يحتاج Android 11 (SDK ${MIN_SDK}) أو أحدث، ولن يُثبَّت على هذه الشاشة.`,
+        };
+      }
+      return { state: "ok", value: `SDK ${sdk}`, detail: `الموديل: ${model}. مناسب للتطبيق (الحد الأدنى SDK ${MIN_SDK}).` };
+    },
+  },
+  {
+    id: "installed",
+    title: "التطبيق مثبّت",
+    async check(ctx) {
+      const path = parsePmPath((await quietRun(ctx, cmd.pmPath(ctx.pkg))).stdout);
+      if (path) return { state: "ok", value: "مثبّت", detail: `المسار: ${path}` };
+      return {
+        state: "fail",
+        value: "غير مثبّت",
+        detail: "التطبيق غير مثبّت، ولا يمكن إصلاح صلاحياته قبل تثبيته. ثبّته من القسم 1 في القائمة الجانبية.",
+      };
+    },
+  },
+  {
+    id: "version",
+    title: "إصدار التطبيق",
+    needsApp: true,
+    async check(ctx) {
+      return versionStatus(parseVersion((await quietRun(ctx, cmd.dumpsysPackage(ctx.pkg))).stdout));
+    },
+  },
+  {
+    id: "overlay",
+    title: "الزر العائم (الظهور فوق التطبيقات)",
+    needsApp: true,
+    async check(ctx) {
+      const mode = parseAppOp((await quietRun(ctx, cmd.appopsGet(ctx.pkg, "SYSTEM_ALERT_WINDOW"))).stdout);
+      if (mode === "allow") {
+        return { state: "ok", value: mode, detail: "مسموح. الزر العائم يستطيع الظهور فوق التطبيقات." };
+      }
+      return {
+        state: "fail",
+        value: mode,
+        detail: "غير مسموح، فلن يظهر الزر العائم. تأكد أيضاً من تفعيله داخل التطبيق.",
+      };
+    },
+    async fix(ctx) {
+      return [cmd.appopsSet(ctx.pkg, "SYSTEM_ALERT_WINDOW", "allow")];
+    },
+  },
+  {
+    id: "accessibility",
+    title: "شريط الأزرار السفلي (خدمة إمكانية الوصول)",
+    needsApp: true,
+    async check(ctx) {
+      const services = (await quietRun(ctx, cmd.settingsGet("enabled_accessibility_services"))).stdout;
+      const enabled = parseSettingValue((await quietRun(ctx, cmd.settingsGet("accessibility_enabled"))).stdout);
+      const inList = hasNavService(services, ctx.pkg);
+      if (inList && enabled === "1") {
+        return { state: "ok", value: "مفعّلة", detail: "الخدمة مفعّلة وإمكانية الوصول مفعّلة. تأكد من تفعيل الأزرار السفلية داخل التطبيق." };
+      }
+      if (inList) {
+        return { state: "fail", value: "معطّلة عامةً", detail: "الخدمة مضافة لكن إمكانية الوصول معطّلة في النظام." };
+      }
+      return {
+        state: "fail",
+        value: "غير مفعّلة",
+        detail: "الخدمة غير مفعّلة، فلن يظهر الشريط السفلي. الإصلاح يضيفها دون حذف الخدمات الأخرى.",
+      };
+    },
+    async fix(ctx) {
+      const current = (await quietRun(ctx, cmd.settingsGet("enabled_accessibility_services"))).stdout;
+      return [
+        cmd.settingsPut("enabled_accessibility_services", mergeAccessibilityServices(current, ctx.pkg)),
+        cmd.settingsPut("accessibility_enabled", "1"),
+      ];
+    },
+  },
+  {
+    id: "install_unknown",
+    title: "التثبيت من مصادر غير معروفة",
+    needsApp: true,
+    async check(ctx) {
+      const mode = parseAppOp((await quietRun(ctx, cmd.appopsGet(ctx.pkg, "REQUEST_INSTALL_PACKAGES"))).stdout);
+      if (mode === "allow") {
+        return { state: "ok", value: mode, detail: "مسموح للتطبيق بطلب تثبيت الملفات، وهذا ضروري لتثبيت التحديث من داخله." };
+      }
+      return { state: "fail", value: mode, detail: "غير مسموح، فلن يستطيع التطبيق فتح مثبّت التحديث." };
+    },
+    async fix(ctx) {
+      return [cmd.appopsSet(ctx.pkg, "REQUEST_INSTALL_PACKAGES", "allow")];
+    },
+  },
+  {
+    id: "notifications",
+    title: "الإشعارات",
+    needsApp: true,
+    async check(ctx) {
+      const sdk = parseSdk((await quietRun(ctx, cmd.sdk())).stdout);
+      if (sdk !== null && sdk < NOTIFY_SDK) {
+        return { state: "na", value: "لا ينطبق", detail: "هذا الإصدار لا يحتاج إذن إشعارات منفصل (يبدأ من Android 13)." };
+      }
+      const granted = parseGranted((await quietRun(ctx, cmd.dumpsysPackage(ctx.pkg))).stdout, "android.permission.POST_NOTIFICATIONS");
+      if (granted === true) return { state: "ok", value: "مسموحة", detail: "إشعار 'التحديث جاهز' سيظهر." };
+      if (granted === false) return { state: "fail", value: "غير مسموحة", detail: "لن يظهر إشعار 'التحديث جاهز'." };
+      return { state: "info", value: "غير معروف", detail: "الصلاحية غير مذكورة في معلومات التطبيق." };
+    },
+    async fix(ctx) {
+      return [cmd.pmGrant(ctx.pkg, "android.permission.POST_NOTIFICATIONS")];
+    },
+  },
+  {
+    id: "background",
+    title: "التشغيل في الخلفية",
+    needsApp: true,
+    async check(ctx) {
+      const mode = parseAppOp((await quietRun(ctx, cmd.appopsGet(ctx.pkg, "RUN_ANY_IN_BACKGROUND"))).stdout);
+      if (mode === "allow" || mode === "default") {
+        return { state: "ok", value: mode, detail: "مسموح بالعمل في الخلفية." };
+      }
+      return { state: "fail", value: mode, detail: "مقيّد. قد يتوقف فحص التحديثات كل 6 ساعات ويُقتل الزر العائم." };
+    },
+    async fix(ctx) {
+      return [cmd.appopsSet(ctx.pkg, "RUN_ANY_IN_BACKGROUND", "allow")];
+    },
+  },
+  {
+    id: "battery",
+    title: "استثناء توفير البطارية",
+    needsApp: true,
+    async check(ctx) {
+      const list = (await quietRun(ctx, cmd.whitelistList())).stdout;
+      if (isWhitelisted(list, ctx.pkg)) {
+        return { state: "ok", value: "مستثنى", detail: "التطبيق مستثنى من تحسين البطارية." };
+      }
+      return { state: "fail", value: "غير مستثنى", detail: "قد يوقف النظام التحديثات الخلفية. الإصلاح يضيفه إلى الاستثناءات." };
+    },
+    async fix(ctx) {
+      return [cmd.whitelistAdd(ctx.pkg)];
+    },
+  },
+];
+
+// Runs every check. Checks that need the app are skipped when it is not installed.
+async function runDoctor(ctx) {
+  const results = [];
+  let installed = null;
+  for (const check of CHECKS) {
+    let res;
+    try {
+      if (check.needsApp && installed === false) {
+        res = { state: "na", value: "—", detail: "يحتاج تثبيت التطبيق أولاً." };
+      } else {
+        res = await check.check(ctx);
+      }
+    } catch (e) {
+      res = { state: "error", value: "خطأ", detail: e?.message ?? String(e) };
+    }
+    if (check.id === "installed") installed = res.state === "ok";
+    results.push({ id: check.id, title: check.title, fixable: typeof check.fix === "function", ...res });
+  }
+  return results;
+}
+
+// Applies the fix for one check, then re-checks it. Nothing is reported as fixed without a re-check.
+async function applyFix(ctx, id) {
+  const check = CHECKS.find((c) => c.id === id);
+  if (!check || typeof check.fix !== "function") throw new Error("لا يوجد إصلاح تلقائي لهذا البند.");
+  const commands = await check.fix(ctx);
+  const outcomes = [];
+  for (const command of commands) {
+    const r = await ctx.run(command, { quiet: false });
+    outcomes.push({ command, ok: r.ok, exitCode: r.exitCode, output: [r.stdout, r.stderr, r.error].filter(Boolean).join("\n").trim() });
+  }
+  const after = await check.check(ctx);
+  return { id, title: check.title, outcomes, after, fixed: after.state === "ok" };
+}
+
+// Fixes every failing, fixable check, then runs the doctor again.
+async function autoFix(ctx) {
+  const before = await runDoctor(ctx);
+  const actions = [];
+  for (const r of before) {
+    if (r.state === "fail" && r.fixable) actions.push(await applyFix(ctx, r.id));
+  }
+  const after = await runDoctor(ctx);
+  return { before, actions, after };
+}
+
+// ---------- Error knowledge base ----------
+// Each rule maps a message pattern to a cause and concrete steps. Every rule that matches is returned,
+// in table order. The generic INSTALL_* fallback is used only when no rule matches.
+
+const ERROR_RULES = [
+  {
+    id: "unauthorized",
+    match: /unauthorized|not authorized|AdbAuth|authentication failed/i,
+    title: "الشاشة لم تقبل تصريح تصحيح USB",
+    steps: [
+      "انظر إلى شاشة السيارة واضغط 'السماح'، وفعّل 'السماح دائماً' من هذا الكمبيوتر.",
+      "إن لم يظهر الطلب: من خيارات المطور ألغِ 'إلغاء تصاريح تصحيح USB' ثم أعد توصيل الكابل.",
+    ],
+  },
+  {
+    id: "timeout",
+    match: /انتهت المهلة الزمنية: موافقة الشاشة/,
+    title: "لم تُقبل الموافقة على الشاشة في الوقت المحدد",
+    steps: [
+      "انظر إلى شاشة السيارة واضغط \"السماح\" (وفعّل السماح دائماً).",
+      "أعد الضغط على زر توصيل الشاشة بعد ذلك.",
+    ],
+  },
+  {
+    id: "command_timeout",
+    match: /انتهت المهلة الزمنية: (?!موافقة الشاشة)/,
+    title: "انتهت مهلة الأمر على الشاشة",
+    steps: [
+      "إن كانت الشاشة تعرض نافذة تأكيد فاضغط 'تثبيت' أو 'السماح' عليها، ثم أعد المحاولة.",
+      "إن تكرر ذلك فأعد توصيل الكابل والشاشة، ثم حاول مرة أخرى.",
+    ],
+  },
+  {
+    id: "offline",
+    match: /device offline/i,
+    title: "الجهاز غير متصل بشكل سليم (offline)",
+    steps: ["افصل الكابل وأعد توصيله.", "أعد تشغيل تصحيح USB من خيارات المطور، ثم حاول مرة أخرى."],
+  },
+  {
+    id: "no_device",
+    match: /no devices\/emulators found|device '.*' not found|error: closed/i,
+    title: "لا يوجد جهاز متصل بالكمبيوتر",
+    steps: ["تحقق من كابل USB (جرّب كابلاً آخر أو منفذاً آخر).", "تأكد أن تصحيح USB مفعّل على الشاشة."],
+  },
+  {
+    id: "adb_missing",
+    match: /'adb' is not recognized|adb: command not found|adb.*not recognized/i,
+    title: "أداة adb غير موجودة على الكمبيوتر",
+    steps: ["ثبّت Android platform-tools.", "أو أضف مجلد platform-tools إلى PATH، أو استخدم المسار الكامل إلى adb.exe."],
+  },
+  {
+    id: "claim_interface",
+    match: /Unable to claim interface|claimInterface|already in use/i,
+    title: "الجهاز محجوز من برنامج آخر، أو التعريف لا يسمح للمتصفح بالوصول",
+    steps: [
+      "أغلق Android Studio وأي نافذة adb، ثم نفّذ في الكمبيوتر: adb kill-server.",
+      "على Windows: إن استمر الخطأ، ثبّت تعريف WinUSB لجهاز Android ADB عبر Zadig. وللرجوع استخدم Device Manager.",
+    ],
+  },
+  {
+    id: "webusb_denied",
+    match: /NotAllowedError|SecurityError/i,
+    title: "المتصفح منع الوصول إلى USB",
+    steps: [
+      "استخدم Google Chrome أو Microsoft Edge على سطح المكتب.",
+      "افتح الصفحة كملف محلي أو من HTTPS، وليس داخل إطار (iframe).",
+      "تحقق من أذونات USB للموقع في إعدادات المتصفح.",
+    ],
+  },
+  {
+    id: "no_device_selected",
+    match: /NotFoundError|No device selected/i,
+    title: "لم تُختر جهاز الشاشة من نافذة المتصفح",
+    steps: ["اضغط زر التوصيل ثم اختر جهاز Android من القائمة."],
+  },
+  {
+    id: "webusb_unsupported",
+    match: /WebUSB|navigator\.usb|reading 'requestDevice'/i,
+    title: "المتصفح لا يدعم WebUSB",
+    steps: ["استخدم Google Chrome أو Microsoft Edge على الكمبيوتر."],
+  },
+  {
+    id: "lib_load",
+    match: /Failed to fetch dynamically imported module|Failed to load module script|Failed to fetch|ERR_INTERNET_DISCONNECTED|net::ERR/i,
+    title: "تعذّر تحميل مكتبة ADB من الإنترنت",
+    steps: ["تحقق من الاتصال بالإنترنت، ثم أعد تحميل الصفحة."],
+  },
+  {
+    id: "install_update_incompatible",
+    match: /INSTALL_FAILED_UPDATE_INCOMPATIBLE/,
+    title: "التوقيع لا يطابق النسخة المثبتة",
+    steps: [
+      "النسخة المثبتة موقّعة بمفتاح مختلف، وغالباً تكون نسخة debug من الكمبيوتر.",
+      "ثبّت APK المنشور في GitHub، لأنه موقّع بمفتاح الإصدار.",
+      "إن كانت المثبتة نسخة debug فألغِ تثبيتها أولاً. تنبيه: هذا يحذف بيانات التطبيق وصلاحياته.",
+    ],
+  },
+  {
+    id: "install_version_downgrade",
+    match: /INSTALL_FAILED_VERSION_DOWNGRADE/,
+    title: "النسخة أقدم من المثبتة",
+    steps: [
+      "ثبّت نسخة أحدث (رقم versionCode أعلى).",
+      "للنسخ debug فقط يمكن استخدام adb install -r -d لتجاوز ذلك.",
+    ],
+  },
+  {
+    id: "install_older_sdk",
+    match: /INSTALL_FAILED_OLDER_SDK/,
+    title: "إصدار أندرويد في الشاشة أقل من المطلوب",
+    steps: ["التطبيق يحتاج Android 11 أو أحدث، ولا يمكن تثبيته على هذه الشاشة."],
+  },
+  {
+    id: "sync_no_space",
+    match: /No space left on device|ENOSPC/i,
+    title: "لا توجد مساحة كافية على الشاشة لنقل الملف",
+    steps: [
+      "احذف ملفات أو تطبيقات غير مستخدمة من الشاشة، ثم أعد المحاولة.",
+      "الملف يحتاج نحو 7 ميغابايت مؤقتاً، ويُحذف من الشاشة بعد التثبيت.",
+    ],
+  },
+  {
+    id: "install_storage",
+    match: /INSTALL_FAILED_INSUFFICIENT_STORAGE/,
+    title: "لا توجد مساحة كافية على الشاشة",
+    steps: ["احذف تطبيقات غير مستخدمة أو ملفات كبيرة، ثم أعد المحاولة."],
+  },
+  {
+    id: "install_user_restricted",
+    match: /INSTALL_FAILED_USER_RESTRICTED|INSTALL_CANCELED_BY_USER|Install canceled by user/i,
+    title: "التثبيت مرفوض من النظام أو ألغاه المستخدم",
+    steps: [
+      "إن ظهرت نافذة تأكيد على الشاشة فاضغط 'تثبيت'.",
+      "فعّل 'التثبيت عبر USB' من خيارات المطور إن وُجد.",
+      "إن كان التثبيت من داخل تطبيق: فعّل 'التثبيت من مصادر غير معروفة' لذلك التطبيق.",
+    ],
+  },
+  {
+    id: "install_parse",
+    match: /INSTALL_PARSE_FAILED|INSTALL_FAILED_INVALID_APK|PARSE_FAILED_NO_CERTIFICATES|not a valid APK/i,
+    title: "الملف ليس APK صالحاً أو أنه تالف",
+    steps: [
+      "أعد تحميل الملف من GitHub.",
+      "قارن حجم الملف وSHA-256 مع update.json المنشور في الإصدار.",
+    ],
+  },
+  {
+    id: "permission_denial",
+    match: /Permission Denial|SecurityException|Security exception/i,
+    title: "أمر محظور بسبب صلاحية مفقودة",
+    steps: [
+      "اقرأ اسم الصلاحية في الرسالة.",
+      "الصلاحيات العادية تُمنح بـ pm grant، والخاصة تُمنح بـ appops.",
+      "شغّل زر 'إصلاح تلقائي' في التشخيص لأشهر الصلاحيات.",
+    ],
+  },
+  {
+    id: "unknown_permission",
+    match: /Unknown permission|not a changeable permission type/i,
+    title: "الصلاحية غير معرّفة أو لا تُغيَّر بهذا الأمر",
+    steps: [
+      "تحقق من كتابة اسم الصلاحية بالكامل.",
+      "يجب أن يعلنها التطبيق في AndroidManifest.xml.",
+      "صلاحيات التثبيت تُمنح تلقائياً ولا تحتاج pm grant.",
+    ],
+  },
+  {
+    id: "not_runtime_permission",
+    match: /is not a runtime permission|Operation not allowed/i,
+    title: "هذه ليست صلاحية وقت التشغيل",
+    steps: [
+      "استخدم appops بدلاً من pm grant. مثال: appops set <package> SYSTEM_ALERT_WINDOW allow.",
+    ],
+  },
+  {
+    id: "permission_not_requested",
+    match: /not requested by package|has not requested|not requested/i,
+    title: "التطبيق المثبّت لا يطلب هذه الصلاحية",
+    steps: [
+      "الصلاحية لا تُمنح إلا إذا أعلنها التطبيق في AndroidManifest.xml، فلا يمكن منحها من الكمبيوتر.",
+      "ثبّت الملف من القسم 1 في القائمة الجانبية (الإصدار 1.1.6 يعلن صلاحية الإشعارات)، ثم أعد التشخيص.",
+    ],
+  },
+  {
+    id: "unknown_package",
+    match: /Unknown package|Package .* not found|Error: Unknown package/i,
+    title: "التطبيق غير مثبّت",
+    steps: ["ثبّت التطبيق أولاً من القسم 1 في القائمة الجانبية، ثم شغّل التشخيص."],
+  },
+  {
+    id: "appops_missing",
+    match: /appops: .*(inaccessible|not found)|Can't find service: appops/i,
+    title: "أمر appops غير متاح على هذا النظام",
+    steps: [
+      "جرّب الصيغة cmd appops بدلاً من appops.",
+      "إن لم يعمل، فالإعداد يحتاج إلى الواجهة الرسومية للنظام إن توفرت.",
+    ],
+  },
+];
+
+function diagnoseText(text) {
+  const src = String(text ?? "");
+  const hits = ERROR_RULES.filter((rule) => rule.match.test(src));
+  if (hits.length === 0) {
+    const generic = /Failure \[(INSTALL_[A-Z_]+)/.exec(src);
+    if (generic) {
+      return [{
+        id: "install_generic",
+        title: `فشل التثبيت برمز ${generic[1]}`,
+        steps: ["ابحث عن الرمز أعلاه في هذه الصفحة إن كان مدرجاً، أو أرسل الرسالة كاملة للتحليل."],
+      }];
+    }
+  }
+  return hits;
+}
+
+// ---------- Environment notes ----------
+
+function environmentNotes({ hasWebUsb, isSecureContext, userAgent }) {
+  const notes = [];
+  if (!hasWebUsb) notes.push({ level: "fail", text: "المتصفح لا يدعم WebUSB. استخدم Google Chrome أو Microsoft Edge على الكمبيوتر." });
+  if (!isSecureContext) notes.push({ level: "warn", text: "الصفحة ليست في سياق آمن (HTTPS أو ملف محلي). قد يمنع المتصفح الوصول إلى USB." });
+  const ua = String(userAgent ?? "");
+  if (/Firefox\//.test(ua)) notes.push({ level: "fail", text: "Firefox لا يدعم WebUSB. استخدم Chrome أو Edge." });
+  return notes;
+}
+
+// ---------- Install script (Windows .bat) ----------
+// Uses CRLF line endings. The bat never touches the accessibility list: the page merges that list instead.
+
+function buildInstallBat({ pkg, version, apkName, apkUrl }) {
+  const lines = [
+    "@echo off",
+    "chcp 65001 >nul",
+    `title Car_DisplayZ Installer ${version}`,
+    "setlocal",
+    `set "PKG=${pkg}"`,
+    `set "APK=${apkName}"`,
+    `set "URL=${apkUrl}"`,
+    "set \"ADB=adb\"",
+    "where adb >nul 2>&1",
+    "if not errorlevel 1 goto :adb_ok",
+    "if not exist \"%LOCALAPPDATA%\\Android\\Sdk\\platform-tools\\adb.exe\" goto :adb_missing",
+    "set \"ADB=%LOCALAPPDATA%\\Android\\Sdk\\platform-tools\\adb.exe\"",
+    ":adb_ok",
+    "echo ===================================================",
+    `echo      Car_DisplayZ Installer - الإصدار ${version}`,
+    "echo ===================================================",
+    "echo.",
+    "\"%ADB%\" get-state >nul 2>&1",
+    "if errorlevel 1 goto :no_device",
+    "if exist \"%APK%\" goto :have_apk",
+    "echo جاري تحميل التحديث من GitHub...",
+    "curl -L -f -o \"%APK%\" \"%URL%\"",
+    "if errorlevel 1 goto :download_failed",
+    ":have_apk",
+    "echo جاري تثبيت التطبيق...",
+    "\"%ADB%\" install -r \"%APK%\" > \"%TEMP%\\cdz_install.txt\" 2>&1",
+    "type \"%TEMP%\\cdz_install.txt\"",
+    "find /i \"Success\" \"%TEMP%\\cdz_install.txt\" >nul",
+    "if errorlevel 1 goto :install_failed",
+    "echo.",
+    "echo جاري منح الصلاحيات الأساسية...",
+    "\"%ADB%\" shell appops set %PKG% SYSTEM_ALERT_WINDOW allow",
+    "\"%ADB%\" shell appops set %PKG% REQUEST_INSTALL_PACKAGES allow",
+    "\"%ADB%\" shell dumpsys deviceidle whitelist +%PKG%",
+    "echo.",
+    "echo ملاحظة: خدمة الشريط السفلي تُفعَّل من الصفحة (WebInstaller) حتى لا تُمسح الخدمات الأخرى.",
+    "echo تم. افتح التطبيق على الشاشة وتحقق من الزر العائم.",
+    "goto :end",
+    ":adb_missing",
+    "echo [خطأ] لم أجد adb. ثبّت Android platform-tools أو أضفه إلى PATH.",
+    "goto :end",
+    ":no_device",
+    "echo [خطأ] الشاشة غير متصلة. تحقق من الكابل وتفعيل تصحيح USB ثم أعد المحاولة.",
+    "goto :end",
+    ":download_failed",
+    "echo [خطأ] فشل التحميل. تحقق من الإنترنت ثم أعد المحاولة.",
+    "goto :end",
+    ":install_failed",
+    "echo [خطأ] فشل التثبيت. الصق رسالة Failure أو INSTALL_FAILED في مفكّك الأخطاء على الصفحة.",
+    ":end",
+    "echo.",
+    "pause",
+  ];
+  return lines.join("\r\n") + "\r\n";
+}
+
+// ---------- App glue: DOM, WebUSB connection, ADB shell and file transfer ----------
+// Libraries are loaded with dynamic import() so the page still opens (and explains the problem)
+// when the CDN cannot be reached.
+
+const $ = (id) => document.getElementById(id);
+
+const CDN = {
+  adb: "https://cdn.jsdelivr.net/npm/@yume-chan/adb@2.6.4/+esm",
+  webusb: "https://cdn.jsdelivr.net/npm/@yume-chan/adb-daemon-webusb@2.3.2/+esm",
+  cred: "https://cdn.jsdelivr.net/npm/@yume-chan/adb-credential-web@2.1.0/+esm",
+};
+const COMMAND_TIMEOUT_MS = 30000;
+const AUTH_TIMEOUT_MS = 90000;      // time to press "السماح" on the car screen
+const INSTALL_TIMEOUT_MS = 180000;  // copying and installing the APK can take a while
+const LOG_KEY = "cdz_webinstaller_fixlog_v3";
+
+let adb = null;
+let deviceModel = "";
+let busy = false;
+let lastResults = [];
+let libError = null;
+
+const libReady = (async () => {
+  try {
+    const [a, w, c] = await Promise.all([import(CDN.adb), import(CDN.webusb), import(CDN.cred)]);
+    return {
+      Adb: a.Adb,
+      AdbDaemonTransport: a.AdbDaemonTransport,
+      WebUsbManager: w.AdbDaemonWebUsbDeviceManager,
+      CredentialStore: c.default,
+    };
+  } catch (e) {
+    libError = e;
+    return null;
+  }
+})();
+
+// ---------- Terminal ----------
+
+// Adds a line and returns it, so the line can be updated later (for example transfer progress).
+function out(text, kind = "") {
+  const term = $("terminal");
+  const line = document.createElement("div");
+  line.className = `line ${kind}`.trim();
+  line.textContent = text;   // textContent: device output is never parsed as HTML
+  term.appendChild(line);
+  term.scrollTop = term.scrollHeight;
+  return line;
+}
+
+function hints(text) {
+  for (const h of diagnoseText(text).slice(0, 3)) {
+    out(`▸ ${h.title}`, "hint");
+    for (const step of h.steps) out(`    - ${step}`, "hint");
+  }
+}
+
+function withTimeout(promise, ms, label) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`انتهت المهلة الزمنية: ${label}`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+// ---------- Connection ----------
+
+function setConnected(on) {
+  const badge = $("statusBadge");
+  badge.textContent = on ? "متصل بالشاشة ✅" : "غير متصل ❌";
+  badge.classList.toggle("connected", on);
+  $("btnConnect").hidden = on;
+  $("btnDisconnect").hidden = !on;
+}
+
+function onDisconnected() {
+  if (adb) out("انقطع الاتصال بالشاشة.", "warn");
+  adb = null;
+  setConnected(false);
+}
+
+async function closeQuietly(target) {
+  try { await target?.close?.(); } catch { /* already closed */ }
+}
+
+async function connect() {
+  if (adb) return;
+  const L = await libReady;
+  if (!L) {
+    const msg = libError?.message ?? String(libError);
+    out(`تعذّر تحميل مكتبة ADB: ${msg}`, "err");
+    hints(msg);
+    return;
+  }
+  const manager = L.WebUsbManager.BROWSER;
+  if (!manager) {
+    out("المتصفح لا يدعم WebUSB.", "err");
+    hints("WebUSB");
+    return;
+  }
+  let connection = null;
+  try {
+    out("اختر جهاز الشاشة من نافذة المتصفح...");
+    const device = await manager.requestDevice();
+    if (!device) {
+      out("لم تختر جهازاً.", "warn");
+      return;
+    }
+    connection = await device.connect();
+    out("وافق على طلب تصحيح USB على شاشة السيارة، واختر 'السماح دائماً'.", "hint");
+    const transport = await withTimeout(
+      L.AdbDaemonTransport.authenticate({
+        serial: device.serial,
+        connection,
+        credentialStore: new L.CredentialStore("Car_DisplayZ WebInstaller"),
+      }),
+      AUTH_TIMEOUT_MS,
+      "موافقة الشاشة",
+    );
+    const session = new L.Adb(transport);
+    adb = session;
+    // A late "disconnected" event from an older session must not drop the current one.
+    const dropped = () => { if (adb === session) onDisconnected(); };
+    session.disconnected?.then?.(dropped, dropped);
+    setConnected(true);
+    out("تم الاتصال بالشاشة ✅", "ok");
+    deviceModel = (await runShell(cmd.model(), { quiet: true })).stdout.trim();
+    out(`الموديل: ${deviceModel || "غير معروف"}`);
+  } catch (e) {
+    adb = null;
+    setConnected(false);
+    await closeQuietly(connection);   // releases the USB interface so the next attempt can claim it
+    const text = `${e?.name ?? "Error"}: ${e?.message ?? e}`;
+    out(`فشل الاتصال: ${text}`, "err");
+    hints(text);
+  }
+}
+
+async function disconnect() {
+  const current = adb;
+  adb = null;
+  setConnected(false);
+  try { await current?.close(); } catch { /* already closed */ }
+  out("تم قطع الاتصال.");
+}
+
+// ---------- Shell ----------
+
+async function runShell(command, opts = {}) {
+  const quiet = !!opts.quiet;
+  const timeoutMs = opts.timeoutMs ?? COMMAND_TIMEOUT_MS;
+  if (!adb) {
+    if (!quiet) out("غير متصل بالشاشة. اضغط 'توصيل الشاشة' أولاً.", "warn");
+    return { ok: false, exitCode: null, stdout: "", stderr: "", error: "غير متصل" };
+  }
+  if (!quiet) out(`$ ${command}`, "cmd");
+  try {
+    let r;
+    const proto = adb.subprocess.shellProtocol;
+    if (proto) {
+      const res = await withTimeout(proto.spawnWaitText(command), timeoutMs, command);
+      r = { ok: res.exitCode === 0, exitCode: res.exitCode, stdout: res.stdout ?? "", stderr: res.stderr ?? "", error: null };
+    } else {
+      // Older Android versions without shell v2: no exit code, so success is assumed unless the call throws.
+      const text = await withTimeout(adb.subprocess.noneProtocol.spawnWaitText(command), timeoutMs, command);
+      r = { ok: true, exitCode: null, stdout: text ?? "", stderr: "", error: null };
+    }
+    if (!quiet) {
+      if (r.stdout.trim()) out(r.stdout.replace(/\s+$/, ""));
+      if (r.stderr.trim()) out(r.stderr.replace(/\s+$/, ""), "err");
+      if (r.exitCode !== null && r.exitCode !== 0) out(`[exit ${r.exitCode}]`, "warn");
+    }
+    return r;
+  } catch (e) {
+    const msg = e?.message ?? String(e);
+    if (!quiet) {
+      out(`خطأ أثناء التنفيذ: ${msg}`, "err");
+      hints(msg);
+    }
+    return { ok: false, exitCode: null, stdout: "", stderr: "", error: msg };
+  }
+}
+
+function makeCtx(pkg) {
+  return {
+    pkg,
+    run: (command, o = {}) => runShell(command, { quiet: o.quiet ?? true }),
+    log: (msg) => out(msg),
+  };
+}
+
+// Only one heavy operation at a time, so commands never interleave on the device.
+async function exclusive(fn) {
+  if (busy) {
+    out("انتظر انتهاء العملية الحالية.", "warn");
+    return;
+  }
+  busy = true;
+  setButtonsDisabled(true);
+  try {
+    await fn();
+  } finally {
+    busy = false;
+    setButtonsDisabled(false);
+  }
+}
+
+function setButtonsDisabled(on) {
+  for (const el of document.querySelectorAll(".action")) el.disabled = on;
+}
+
+function requireConnection() {
+  if (adb) return true;
+  out("اتصل بالشاشة أولاً.", "warn");
+  return false;
+}
+
+function currentPackage() {
+  const pkg = $("pkgInput").value.trim();
+  if (!isValidPackageName(pkg)) {
+    out("اسم الحزمة غير صالح. مثال: com.xmiqarri.cardisplayz", "err");
+    return null;
+  }
+  return pkg;
+}
+
+// ---------- Installing an APK picked from this computer (no adb.exe needed) ----------
+
+// SHA-256 needs a secure context (https or a local file). Returns null when the browser cannot compute it.
+async function sha256Hex(blob) {
+  if (!globalThis.crypto?.subtle) return null;
+  const digest = await crypto.subtle.digest("SHA-256", await blob.arrayBuffer());
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Copies the file to the head unit through the ADB sync service. onProgress receives the bytes sent so far.
+async function pushFile(file, onProgress) {
+  const sync = await adb.sync();
+  try {
+    let sent = 0;
+    const source = file.stream().pipeThrough(new TransformStream({
+      transform(chunk, controller) {
+        sent += chunk.byteLength;
+        onProgress(sent);
+        controller.enqueue(chunk);
+      },
+    }));
+    await sync.write({ filename: APK_TEMP_PATH, file: source, permission: 0o644 });
+  } finally {
+    await sync.dispose();
+  }
+}
+
+async function installApk(file) {
+  if (!requireConnection()) return;
+  const pkg = currentPackage();
+  if (!pkg) return;
+
+  const head = new Uint8Array(await file.slice(0, 4).arrayBuffer());
+  const check = checkApkFile({ name: file.name, size: file.size, head });
+  if (!check.ok) {
+    out(`لن يُنقل الملف إلى الشاشة: ${check.reason}`, "err");
+    return;
+  }
+  out(`الملف: ${file.name} (${(file.size / 1048576).toFixed(1)} ميغابايت)`);
+
+  const sha256 = await sha256Hex(file);
+  if (isOfficialApk({ size: file.size, sha256 })) {
+    out(`الملف مطابق للإصدار ${APP_VERSION} المنشور في GitHub ✅`, "ok");
+  } else {
+    const question = sha256 === null
+      ? "تعذّر حساب بصمة الملف (SHA-256) لأن الصفحة ليست في سياق آمن.\nتأكد أنك نزّلت الملف من رابط GitHub في هذه الصفحة.\n\nمتابعة؟"
+      : `هذا الملف ليس نسخة الإصدار ${APP_VERSION} المنشورة في GitHub.\nقد يفشل التثبيت، أو يكون الملف غير موثوق.\n\nمتابعة بهذا الملف؟`;
+    if (!confirm(question)) {
+      out("ألغيت العملية. لم يُنقل أي شيء إلى الشاشة.", "warn");
+      return;
+    }
+    if (sha256) out(`SHA-256 للملف: ${sha256}`, "warn");
+  }
+
+  const sdk = parseSdk((await runShell(cmd.sdk(), { quiet: true })).stdout);
+  if (sdk !== null && sdk < MIN_SDK) {
+    out(`إصدار أندرويد في الشاشة (SDK ${sdk}) أقل من المطلوب (SDK ${MIN_SDK}). لن يُنقل الملف.`, "err");
+    return;
+  }
+
+  const progress = out("نقل الملف إلى الشاشة: 0%", "hint");
+  let shownPct = -1;
+  try {
+    await withTimeout(
+      pushFile(file, (sent) => {
+        const pct = Math.floor((sent / file.size) * 100);
+        if (pct === shownPct) return;
+        shownPct = pct;
+        progress.textContent = `نقل الملف إلى الشاشة: ${pct}%`;
+      }),
+      INSTALL_TIMEOUT_MS,
+      "نقل الملف إلى الشاشة",
+    );
+    progress.className = "line ok";
+    progress.textContent = "تم نقل الملف إلى الشاشة ✅";
+
+    const r = await runShell(cmd.pmInstall(APK_TEMP_PATH), { timeoutMs: INSTALL_TIMEOUT_MS });
+    const result = parseInstallResult(`${r.stdout}\n${r.stderr}`);
+    if (!result.ok || r.error) {
+      out(`لم يكتمل التثبيت${result.code ? `: ${result.code}` : ""}.`, "err");
+      hints(`${r.stdout}\n${r.stderr}\n${r.error ?? ""}`);
+      return;
+    }
+
+    // "Success" alone is not trusted: the installed version is read back from the head unit.
+    const info = parseVersion((await runShell(cmd.dumpsysPackage(pkg), { quiet: true })).stdout);
+    if (!info) {
+      out(`انتهى الأمر لكن التطبيق ${pkg} لا يظهر على الشاشة. تأكد من اسم الحزمة.`, "err");
+      return;
+    }
+    const status = versionStatus(info);
+    if (status.state === "ok") out(`تم التثبيت ✅ الإصدار ${status.value}`, "ok");
+    else out(`تم التثبيت. ${status.detail}`, "warn");
+    out("الخطوة التالية: اضغط 'إصلاح تلقائي لكل المشاكل' في القسم 2، ثم افتح التطبيق على الشاشة.", "hint");
+    lastResults = await runDoctor(makeCtx(pkg));
+    renderChecks(lastResults);
+    summarize(lastResults);
+  } catch (e) {
+    const text = `${e?.name ?? "Error"}: ${e?.message ?? e}`;
+    out(`فشل نقل الملف أو تثبيته: ${text}`, "err");
+    hints(text);
+    // A transfer that hangs leaves the session in an unknown state, so the connection is dropped.
+    if (String(e?.message ?? "").startsWith("انتهت المهلة الزمنية")) await disconnect();
+  } finally {
+    // The copy in /data/local/tmp is only needed for the install, so it is removed in every case.
+    await runShell(cmd.rmFile(APK_TEMP_PATH), { quiet: true });
+  }
+}
+
+// ---------- Permission doctor ----------
+
+const STATE_LABEL = { ok: "سليم ✅", fail: "مشكلة ❌", na: "لا ينطبق", info: "معلومة ℹ️", error: "خطأ ⚠️" };
+
+function renderChecks(results) {
+  const box = $("checks");
+  box.replaceChildren();
+  for (const r of results) {
+    const card = document.createElement("article");
+    card.className = `card st-${r.state}`;
+
+    const head = document.createElement("div");
+    head.className = "card-head";
+    const title = document.createElement("strong");
+    title.textContent = r.title;
+    const badge = document.createElement("span");
+    badge.className = "badge";
+    badge.textContent = STATE_LABEL[r.state] ?? r.state;
+    head.append(title, badge);
+
+    const value = document.createElement("div");
+    value.className = "card-value";
+    value.textContent = r.value ?? "";
+
+    const detail = document.createElement("p");
+    detail.className = "card-detail";
+    detail.textContent = r.detail ?? "";
+
+    card.append(head, value, detail);
+    if (r.state === "fail" && r.fixable) {
+      const btn = document.createElement("button");
+      btn.className = "btn btn-small action";
+      btn.textContent = "إصلاح";
+      btn.disabled = busy;   // cards can be re-rendered during an operation
+      btn.addEventListener("click", () => exclusive(() => fixOne(r.id)));
+      card.append(btn);
+    }
+    box.append(card);
+  }
+}
+
+function summarize(results) {
+  const count = (state) => results.filter((r) => r.state === state).length;
+  $("summary").textContent = `سليم: ${count("ok")}  |  مشاكل: ${count("fail")}  |  لا ينطبق: ${count("na")}`;
+}
+
+async function doctor() {
+  if (!requireConnection()) return;
+  const pkg = currentPackage();
+  if (!pkg) return;
+  out(`تشخيص الصلاحيات للتطبيق ${pkg}...`, "hint");
+  lastResults = await runDoctor(makeCtx(pkg));
+  renderChecks(lastResults);
+  summarize(lastResults);
+  out("انتهى التشخيص.", "ok");
+}
+
+async function fixOne(id) {
+  if (!requireConnection()) return;
+  const pkg = currentPackage();
+  if (!pkg) return;
+  const title = CHECKS.find((c) => c.id === id)?.title ?? id;
+  if (!confirm(`سيتم تعديل: ${title}\nللتطبيق: ${pkg}\n\nمتابعة؟`)) return;
+  out(`إصلاح: ${title}`, "hint");
+  const res = await applyFix(makeCtx(pkg), id);
+  recordFix(pkg, res);
+  if (res.fixed) out(`تم الإصلاح ✅: ${title}`, "ok");
+  else {
+    out(`لم ينجح الإصلاح: ${title}. ${res.after.detail}`, "err");
+    hints(res.outcomes.map((o) => o.output).join("\n"));
+  }
+  lastResults = await runDoctor(makeCtx(pkg));
+  renderChecks(lastResults);
+  summarize(lastResults);
+}
+
+async function autoFixAll() {
+  if (!requireConnection()) return;
+  const pkg = currentPackage();
+  if (!pkg) return;
+  if (!confirm(`سيفحص الأداة التطبيق ${pkg} ويصلح كل البنود المعطلة القابلة للإصلاح.\nلن يُحذف أي تطبيق أو بيانات.\n\nمتابعة؟`)) return;
+  out(`إصلاح تلقائي للتطبيق ${pkg}...`, "hint");
+  const report = await autoFix(makeCtx(pkg));
+  for (const a of report.actions) {
+    recordFix(pkg, a);
+    out(`${a.fixed ? "✔" : "✘"} ${a.title}`, a.fixed ? "ok" : "err");
+  }
+  if (report.actions.length === 0) out("لا توجد بنود معطلة قابلة للإصلاح التلقائي.", "ok");
+  lastResults = report.after;
+  renderChecks(lastResults);
+  summarize(lastResults);
+  out("انتهى الإصلاح التلقائي.", "ok");
+}
+
+// ---------- Learning log (kept in this browser only) ----------
+
+function readLog() {
+  try { return JSON.parse(localStorage.getItem(LOG_KEY) ?? "[]"); } catch { return []; }
+}
+
+function recordFix(pkg, a) {
+  const list = readLog();
+  list.push({
+    t: new Date().toISOString(),
+    pkg,
+    model: deviceModel || "غير معروف",
+    id: a.id,
+    title: a.title,
+    fixed: !!a.fixed,
+    commands: (a.outcomes ?? []).map((o) => o.command),
+  });
+  try { localStorage.setItem(LOG_KEY, JSON.stringify(list.slice(-50))); } catch { /* storage blocked */ }
+  renderLog();
+}
+
+function renderLog() {
+  const ul = $("fixLog");
+  ul.replaceChildren();
+  const entries = readLog().slice(-15).reverse();
+  if (entries.length === 0) {
+    const li = document.createElement("li");
+    li.textContent = "لا توجد إصلاحات مسجّلة بعد.";
+    ul.append(li);
+    return;
+  }
+  for (const e of entries) {
+    const li = document.createElement("li");
+    const when = String(e.t ?? "").slice(0, 16).replace("T", " ");
+    li.textContent = `${when} | ${e.model} | ${e.title} | ${e.fixed ? "نجح" : "لم ينجح"}`;
+    ul.append(li);
+  }
+}
+
+// ---------- Error decoder ----------
+
+function decode() {
+  const text = $("errInput").value;
+  const box = $("decoderOut");
+  box.replaceChildren();
+  if (!text.trim()) return;
+  const hits = diagnoseText(text);
+  if (hits.length === 0) {
+    box.textContent = "لم أجد مطابقة معروفة. أرسل نص الخطأ كاملاً مع السطر الذي قبله.";
+    return;
+  }
+  for (const h of hits) {
+    const card = document.createElement("article");
+    card.className = "card st-info";
+    const title = document.createElement("strong");
+    title.textContent = h.title;
+    const ol = document.createElement("ol");
+    ol.className = "steps";
+    for (const step of h.steps) {
+      const li = document.createElement("li");
+      li.textContent = step;
+      ol.append(li);
+    }
+    card.append(title, ol);
+    box.append(card);
+  }
+}
+
+// ---------- Tools ----------
+
+// The optional Windows script. It needs adb.exe on the computer, which the page itself does not.
+function downloadBat() {
+  const text = buildInstallBat({
+    pkg: DEFAULT_PACKAGE,
+    version: APP_VERSION,
+    apkName: EXPECTED_APK_NAME,
+    apkUrl: RELEASE_APK_URL,
+  });
+  const blob = new Blob([text], { type: "application/octet-stream" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `Install_Car_DisplayZ_${APP_VERSION}.bat`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+  out("تم تنزيل سكربت BAT. يحتاج adb.exe على الكمبيوتر، ولا حاجة له إذا ثبّتّ التطبيق من هذه الصفحة.", "ok");
+}
+
+async function listApps() {
+  if (!requireConnection()) return;
+  await runShell(cmd.listUserPackages());
+}
+
+async function grantOverlayToAll() {
+  if (!requireConnection()) return;
+  if (!confirm("تحذير أمني: سيسمح هذا لكل تطبيق ثبّتَه بالظهور فوق الشاشة. يمكن استغلال هذا في خداع المستخدم بصرياً.\nلن تتأثر تطبيقات النظام.\n\nمتابعة؟")) return;
+  const listed = await runShell(cmd.listUserPackages(), { quiet: true });
+  if (!listed.ok) {
+    out("تعذّر قراءة قائمة التطبيقات.", "err");
+    return;
+  }
+  const packages = listed.stdout.split("\n").map((l) => l.replace(/^package:/, "").trim()).filter(isValidPackageName);
+  for (const p of packages) {
+    const r = await runShell(cmd.appopsSet(p, "SYSTEM_ALERT_WINDOW", "allow"), { quiet: true });
+    out(`${p}: ${r.ok ? "تم" : "فشل"}`, r.ok ? "" : "err");
+  }
+  out(`انتهى: ${packages.length} تطبيق.`, "ok");
+}
+
+async function grantAllFiles() {
+  if (!requireConnection()) return;
+  const pkg = currentPackage();
+  if (!pkg) return;
+  if (!confirm(`سيمنح ${pkg} الوصول إلى كل ملفات الشاشة (MANAGE_EXTERNAL_STORAGE).\nهذه صلاحية واسعة: امنحها للتطبيقات الموثوقة فقط.\nتطبيق Car_DisplayZ لا يحتاجها.\n\nمتابعة؟`)) return;
+  const r = await runShell(cmd.appopsSet(pkg, "MANAGE_EXTERNAL_STORAGE", "allow"));
+  out(r.ok ? "تم منح الصلاحية." : "لم تنجح الصلاحية. راجع الرسالة أعلاه.", r.ok ? "ok" : "err");
+}
+
+async function sendManual() {
+  const input = $("cmdInput");
+  const command = input.value.trim();
+  if (!command) return;
+  if (busy) {
+    out("انتظر انتهاء العملية الحالية.", "warn");   // keep the typed command for the next try
+    return;
+  }
+  input.value = "";
+  await exclusive(() => runShell(command));
+}
+
+// ---------- Startup ----------
+
+function renderEnvironment() {
+  const notes = environmentNotes({
+    hasWebUsb: "usb" in navigator,
+    isSecureContext: window.isSecureContext,
+    userAgent: navigator.userAgent,
+  });
+  const box = $("envNotes");
+  box.replaceChildren();
+  if (notes.length === 0) {
+    box.textContent = "المتصفح مناسب ✅";
+    return;
+  }
+  for (const n of notes) {
+    const p = document.createElement("p");
+    p.className = `note ${n.level}`;
+    p.textContent = n.text;
+    box.append(p);
+  }
+}
+
+// The file picker is opened by the install button. The input is reset as soon as a file is chosen,
+// so picking the same file again still fires "change".
+$("btnInstall").addEventListener("click", () => {
+  if (!requireConnection()) return;
+  if (!currentPackage()) return;
+  $("apkFile").click();
+});
+$("apkFile").addEventListener("change", () => {
+  const input = $("apkFile");
+  const file = input.files?.[0];
+  input.value = "";
+  if (file) exclusive(() => installApk(file));
+});
+$("btnConnect").addEventListener("click", () => exclusive(connect));
+$("btnDisconnect").addEventListener("click", () => exclusive(disconnect));
+$("btnDoctor").addEventListener("click", () => exclusive(doctor));
+$("btnAutoFix").addEventListener("click", () => exclusive(autoFixAll));
+$("btnBat").addEventListener("click", downloadBat);
+$("btnDecode").addEventListener("click", decode);
+$("btnListApps").addEventListener("click", () => exclusive(listApps));
+$("btnGrantAllOverlay").addEventListener("click", () => exclusive(grantOverlayToAll));
+$("btnStorage").addEventListener("click", () => exclusive(grantAllFiles));
+$("btnSendCmd").addEventListener("click", sendManual);
+$("cmdInput").addEventListener("keydown", (e) => { if (e.key === "Enter") sendManual(); });
+
+setConnected(false);
+renderEnvironment();
+renderLog();
+out("Car_DisplayZ WebInstaller 3.1 (c) 2026 Abu Tala. All rights reserved.");
+out(`الإصدار ${APP_VERSION} من Car_DisplayZ. اضغط 'توصيل الشاشة'، ثم 'تثبيت ملف APK' أو 'تشخيص الصلاحيات'.`);
+libReady.then((L) => {
+  if (!L) out(`تنبيه: تعذّر تحميل مكتبة ADB (${libError?.message ?? "خطأ"}). الصفحة تعمل بدون اتصال، ومفكّك الأخطاء متاح.`, "warn");
+});
+
+    </script>
+</body>
+</html>
