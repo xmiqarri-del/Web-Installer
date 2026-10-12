@@ -24,6 +24,11 @@ export function isValidPackageName(name) {
   return typeof name === "string" && /^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$/.test(name);
 }
 
+// "package/.Activity" or "package/package.Activity". Used for the home-launcher command.
+export function isValidComponent(name) {
+  return typeof name === "string" && /^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+\/[A-Za-z0-9_.$]+$/.test(name);
+}
+
 export function navServiceComponent(pkg) {
   return `${pkg}/${pkg}.nav.NavBarService`;
 }
@@ -46,6 +51,8 @@ export const cmd = {
   pmUninstall: (pkg) => `pm uninstall ${pkg}`,
   // Opens the app once, the same way a launcher icon does. That clears the stopped state.
   launchOnce: (pkg) => `monkey -p ${pkg} -c android.intent.category.LAUNCHER 1`,
+  // Makes the given launcher activity the default home screen (Android 10 and newer, shell access).
+  setHome: (component) => `cmd package set-home-activity ${component}`,
 };
 
 // ---------- Parsers ----------
