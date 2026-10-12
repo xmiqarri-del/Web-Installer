@@ -17,7 +17,7 @@ const SHOTS = process.env.CDZ_SHOTS ?? join(here, "..", "shots");
 const FIXTURES = join(SHOTS, "fixtures");
 const PKG = "com.xmiqarri.cardisplayz";
 const SCRATCH_APK = "/data/local/tmp/webinstaller_install.apk";
-const RELEASE_APK = "https://github.com/xmiqarri-del/Car_DisplayZ/releases/download/v1.1.6/Car_DisplayZ-v1.1.6.apk";
+const RELEASE_APK = "https://github.com/xmiqarri-del/Car_DisplayZ/releases/download/v1.1.7/Car_DisplayZ-v1.1.7.apk";
 const playwrightUrl = process.env.PLAYWRIGHT_MODULE ? pathToFileURL(process.env.PLAYWRIGHT_MODULE).href : "playwright";
 const { chromium } = await import(playwrightUrl);
 
@@ -122,7 +122,7 @@ async function writeFixture(name, bytes) {
 }
 
 // A stand-in APK: the ZIP header, a text marker that the fake head unit reads back, and padding.
-function fakeApkBytes({ versionName = "1.1.6", versionCode = 8, pad = 4096 } = {}) {
+function fakeApkBytes({ versionName = "1.1.7", versionCode = 9, pad = 4096 } = {}) {
   const marker = `CDZ-FAKE-APK package=${PKG} versionName=${versionName} versionCode=${versionCode}`;
   return Buffer.concat([Buffer.from([0x50, 0x4b, 0x03, 0x04]), Buffer.from(marker, "latin1"), Buffer.alloc(pad)]);
 }
@@ -217,7 +217,7 @@ test("the error decoder explains a pasted install failure", () => withPage({}, a
 test("the BAT download is Windows text with CRLF endings and the right release link", () => withPage({}, async (page) => {
   await waitForText(page, "#terminal", "تشخيص الصلاحيات");
   const [download] = await Promise.all([page.waitForEvent("download"), page.click("#btnBat")]);
-  assert.equal(download.suggestedFilename(), "Install_Car_DisplayZ_1.1.6.bat");
+  assert.equal(download.suggestedFilename(), "Install_Car_DisplayZ_1.1.7.bat");
   const file = join(SHOTS, download.suggestedFilename());
   await download.saveAs(file);
   const bat = await readFile(file, "utf8");
@@ -246,7 +246,7 @@ test("a picked APK is copied to the head unit, installed, cleaned up, and its ve
   { fake: { headUnit: { versionName: "1.1.5", versionCode: 7 } } },
   async (page) => {
     await connectAndWait(page);
-    const apk = await writeFixture("Car_DisplayZ-v1.1.6.apk", fakeApkBytes());
+    const apk = await writeFixture("Car_DisplayZ-v1.1.7.apk", fakeApkBytes());
 
     // The file is not the official build, so the page asks first. Declining copies nothing.
     page.once("dialog", (d) => d.dismiss());
@@ -256,7 +256,7 @@ test("a picked APK is copied to the head unit, installed, cleaned up, and its ve
 
     page.once("dialog", (d) => d.accept());
     await chooseFile(page, apk);
-    await waitForText(page, "#terminal", "تم التثبيت ✅ الإصدار 1.1.6 (8)");
+    await waitForText(page, "#terminal", "تم التثبيت ✅ الإصدار 1.1.7 (9)");
     const hu = await headUnit(page);
     assert.equal(hu.pushes.length, 1);
     assert.equal(hu.pushes[0].filename, SCRATCH_APK);
@@ -265,8 +265,8 @@ test("a picked APK is copied to the head unit, installed, cleaned up, and its ve
     assert.deepEqual(hu.installs, [PKG]);
     assert.deepEqual(hu.removed, [SCRATCH_APK], "the copy is removed afterwards");
     assert.deepEqual(hu.staged, []);
-    assert.equal(hu.version.name, "1.1.6");
-    assert.equal(hu.version.code, 8);
+    assert.equal(hu.version.name, "1.1.7");
+    assert.equal(hu.version.code, 9);
     await waitUntil(async () => (await page.locator("#checks .card.st-ok", { hasText: "إصدار التطبيق" }).count()) === 1,
       "the doctor shows the new version as correct");
     await page.screenshot({ path: join(SHOTS, "desktop-install.png") });
@@ -277,7 +277,7 @@ test("a refused install is explained, the copy is still removed, and the old ver
   { fake: { headUnit: { versionName: "1.1.5", versionCode: 7, installFailure: "INSTALL_FAILED_UPDATE_INCOMPATIBLE" } } },
   async (page) => {
     await connectAndWait(page);
-    const apk = await writeFixture("Car_DisplayZ-v1.1.6.apk", fakeApkBytes());
+    const apk = await writeFixture("Car_DisplayZ-v1.1.7.apk", fakeApkBytes());
     page.once("dialog", (d) => d.accept());
     await chooseFile(page, apk);
     await waitForText(page, "#terminal", "لم يكتمل التثبيت: INSTALL_FAILED_UPDATE_INCOMPATIBLE");
@@ -296,7 +296,7 @@ test("a head unit that is out of space says so, and nothing is installed", () =>
   { fake: { syncFailure: "nospace" } },
   async (page) => {
     await connectAndWait(page);
-    const apk = await writeFixture("Car_DisplayZ-v1.1.6.apk", fakeApkBytes());
+    const apk = await writeFixture("Car_DisplayZ-v1.1.7.apk", fakeApkBytes());
     page.once("dialog", (d) => d.accept());
     await chooseFile(page, apk);
     await waitForText(page, "#terminal", "لا توجد مساحة كافية على الشاشة لنقل الملف");
