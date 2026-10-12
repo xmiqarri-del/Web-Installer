@@ -711,3 +711,34 @@ export function buildInstallBat({ pkg, version, apkName, apkUrl }) {
   ];
   return lines.join("\r\n") + "\r\n";
 }
+
+// ---------- APK catalog (apks/ folder -> manifest.json) ----------
+
+export const CATALOG_NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,120}\.apk$/;
+export const CATALOG_MAX_ENTRIES = 200;
+
+export function isCatalogName(name) {
+  return typeof name === "string" && CATALOG_NAME_RE.test(name);
+}
+
+// entries: [{ name, size, sha256 }]. Names that fail validation are dropped, not repaired.
+export function buildCatalog(entries) {
+  const seen = new Set();
+  const items = [];
+  for (const e of entries) {
+    if (!isCatalogName(e.name) || seen.has(e.name)) continue;
+    if (!(Number.isSafeInteger(e.size) && e.size > 0)) continue;
+    if (!/^[0-9a-f]{64}$/.test(e.sha256 || "")) continue;
+    seen.add(e.name);
+    items.push({ name: e.name, size: e.size, sha256: e.sha256 });
+  }
+  items.sort((a, b) => a.name.localeCompare(b.name, "en"));
+  return { version: 1, apps: items.slice(0, CATALOG_MAX_ENTRIES) };
+}
+
+// Parses manifest.json text. Throws on anything that does not match the expected shape.
+export function parseCatalog(text) {
+  const data = JSON.parse(text);
+  if (!data || data.version !== 1 || !Array.isArray(data.apps)) throw new TypeError("manifest shape is wrong");
+  return buildCatalog(data.apps);
+}
