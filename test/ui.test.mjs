@@ -148,8 +148,8 @@ test("connect, then the doctor lists exactly the five real problems", () => with
     await connectAndWait(page);
     await waitForText(page, "#terminal", "الموديل: JetourG700");
     await runDoctor(page);
-    assert.match(await page.textContent("#summary"), /سليم: 4\s+\|\s+مشاكل: 5\s+\|\s+لا ينطبق: 0/);
-    assert.equal(await page.locator("#checks .card").count(), 9);
+    assert.match(await page.textContent("#summary"), /سليم: 5\s+\|\s+مشاكل: 5\s+\|\s+لا ينطبق: 0/);
+    assert.equal(await page.locator("#checks .card").count(), 10);
     const failing = await page.$$eval("#checks .card.st-fail strong", (els) => els.map((e) => e.textContent));
     assert.deepEqual(failing, [
       "الزر العائم (الظهور فوق التطبيقات)",
@@ -177,7 +177,7 @@ test("auto-fix needs confirmation, then repairs the head unit and keeps other ac
     page.once("dialog", (d) => d.accept());
     await page.click("#btnAutoFix");
     await waitForText(page, "#summary", "مشاكل: 0");
-    assert.match(await page.textContent("#summary"), /سليم: 9/);
+    assert.match(await page.textContent("#summary"), /سليم: 10/);
     const hu = await headUnit(page);
     assert.equal(hu.settings.enabled_accessibility_services,
       `com.other/.Svc:${PKG}/${PKG}.nav.NavBarService`);
@@ -411,6 +411,91 @@ test("older head units without shell v2 still get a full diagnosis", () => withP
     await connectAndWait(page);
     await runDoctor(page);
     assert.match(await page.textContent("#summary"), /مشاكل: 5/);
+  },
+));
+
+test("user-installed apps are listed with checkboxes, and nothing is removed without confirmation", () => withPage({}, async (page) => {
+  await connectAndWait(page);
+  await page.click("#btnListApps");
+  await waitUntil(async () => (await page.locator("#userApps input[type=checkbox]").count()) === 2, "two user apps listed");
+  const values = await page.$$eval("#userApps input[type=checkbox]", (els) => els.map((e) => e.value));
+  assert.deepEqual(values, ["com.waze", "com.xmiqarri.cardisplayz"]);
+  await page.locator(".app-row", { hasText: "com.waze" }).locator("input").check();
+  page.once("dialog", (d) => d.dismiss());
+  await page.click("#btnUninstall");
+  await waitForText(page, "#terminal", "ألغيت العملية. لم يُحذف شيء.");
+  const hu = await headUnit(page);
+  assert.deepEqual(hu.uninstalls, []);
+  assert.ok(hu.userPackages.includes("com.waze"));
+}));
+
+test("checked apps are removed after confirmation, and the list is refreshed", () => withPage({}, async (page) => {
+  await connectAndWait(page);
+  await page.click("#btnListApps");
+  await waitUntil(async () => (await page.locator("#userApps input[type=checkbox]").count()) === 2, "two user apps listed");
+  await page.locator(".app-row", { hasText: "com.waze" }).locator("input").check();
+  page.once("dialog", (d) => d.accept());
+  await page.click("#btnUninstall");
+  await waitForText(page, "#terminal", "تم حذف com.waze ✅");
+  await waitUntil(async () => (await page.locator("#userApps input[type=checkbox]").count()) === 1, "one user app left in the list");
+  const hu = await headUnit(page);
+  assert.deepEqual(hu.uninstalls, ["com.waze"]);
+  assert.deepEqual(hu.userPackages, ["com.xmiqarri.cardisplayz"]);
+}));
+
+test("removing Car_DisplayZ itself is allowed, and the confirmation says it must be reinstalled", () => withPage({}, async (page) => {
+  await connectAndWait(page);
+  await page.click("#btnListApps");
+  await waitUntil(async () => (await page.locator("#userApps input[type=checkbox]").count()) === 2, "two user apps listed");
+  await page.locator(".app-row", { hasText: "com.xmiqarri.cardisplayz" }).locator("input").check();
+  const messages = [];
+  page.once("dialog", (d) => { messages.push(d.message()); d.accept(); });
+  await page.click("#btnUninstall");
+  await waitForText(page, "#terminal", "تم حذف com.xmiqarri.cardisplayz ✅");
+  assert.match(messages[0], /ستحتاج إلى تثبيته من ملف APK/);
+  const hu = await headUnit(page);
+  assert.equal(hu.installed, false);
+  assert.deepEqual(hu.uninstalls, ["com.xmiqarri.cardisplayz"]);
+}));
+
+test("a removal the head unit refuses is explained, and the app stays listed", () => withPage(
+  { fake: { headUnit: { uninstallFailure: "DELETE_FAILED_DEVICE_POLICY_MANAGER" } } },
+  async (page) => {
+    await connectAndWait(page);
+    await page.click("#btnListApps");
+    await waitUntil(async () => (await page.locator("#userApps input[type=checkbox]").count()) === 2, "two user apps listed");
+    await page.locator(".app-row", { hasText: "com.waze" }).locator("input").check();
+    page.once("dialog", (d) => d.accept());
+    await page.click("#btnUninstall");
+    await waitForText(page, "#terminal", "لم يُحذف com.waze: DELETE_FAILED_DEVICE_POLICY_MANAGER.");
+    await waitForText(page, "#terminal", "مسؤول جهاز");
+    const hu = await headUnit(page);
+    assert.deepEqual(hu.uninstalls, []);
+    assert.ok(hu.userPackages.includes("com.waze"));
+  },
+));
+
+test("the delete button asks for a selection first", () => withPage({}, async (page) => {
+  await connectAndWait(page);
+  await page.click("#btnUninstall");
+  await waitForText(page, "#terminal", "حدّد تطبيقاً واحداً على الأقل");
+}));
+
+test("a force-stopped app is flagged, and its launch fix opens it once", () => withPage(
+  { fake: { headUnit: { stopped: true } } },
+  async (page) => {
+    await connectAndWait(page);
+    await runDoctor(page);
+    const bootCard = () => page.locator("article.card", { hasText: "التشغيل بعد إعادة التشغيل" });
+    await waitUntil(async () => ((await bootCard().getAttribute("class")) ?? "").includes("st-fail"), "the boot-start card shows a problem");
+    page.once("dialog", (d) => d.accept());
+    await bootCard().locator("button", { hasText: "إصلاح" }).click();
+    await waitForText(page, "#terminal", "تم الإصلاح ✅: التشغيل بعد إعادة التشغيل");
+    await waitUntil(async () => ((await bootCard().getAttribute("class")) ?? "").includes("st-ok"), "the boot-start card is ok again");
+    const hu = await headUnit(page);
+    assert.deepEqual(hu.launches, [PKG]);
+    assert.equal(hu.stopped, false);
+    assert.equal(hu.notLaunched, false);
   },
 ));
 

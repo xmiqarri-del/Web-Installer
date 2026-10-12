@@ -108,6 +108,9 @@
         .note { margin: 0; font-size: 13px; line-height: 1.6; padding: 8px 10px; border-radius: 8px; background: var(--panel-2); }
         .note.fail { border-right: 3px solid var(--danger); }
         .note.warn { border-right: 3px solid var(--warn); }
+        .app-list { display: flex; flex-direction: column; gap: 6px; max-height: 240px; overflow-y: auto; }
+        .app-row { display: flex; align-items: center; gap: 10px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-family: Consolas, 'Courier New', monospace; font-size: 13px; direction: ltr; text-align: left; cursor: pointer; }
+        .app-row input { accent-color: var(--danger); width: 16px; height: 16px; flex: none; margin: 0; }
 
         .pkg-input {
             width: 100%;
@@ -263,13 +266,19 @@
         </section>
 
         <section class="section">
-            <h2>3. أدوات</h2>
-            <button class="btn btn-muted action" id="btnListApps">📦 التطبيقات المثبتة (من المستخدم)</button>
+            <h2>3. التطبيقات المثبتة من المستخدم</h2>
+            <button class="btn btn-muted action" id="btnListApps">📦 تحديث القائمة</button>
+            <div class="app-list" id="userApps"><p class="note">اضغط "تحديث القائمة" لعرض التطبيقات المثبتة.</p></div>
+            <button class="btn btn-danger action" id="btnUninstall">🗑️ حذف المحدد من الشاشة</button>
+        </section>
+
+        <section class="section">
+            <h2>4. أدوات</h2>
             <button class="btn btn-outline" id="btnBat">📥 سكربت BAT (يحتاج adb.exe على الكمبيوتر)</button>
         </section>
 
         <section class="section">
-            <h2>4. أدوات متقدمة (خطيرة)</h2>
+            <h2>5. أدوات متقدمة (خطيرة)</h2>
             <button class="btn btn-purple action" id="btnGrantAllOverlay">🌟 الظهور فوق الشاشة لكل التطبيقات</button>
             <button class="btn btn-purple action" id="btnStorage">📁 صلاحية كل الملفات لتطبيق محدد</button>
         </section>
@@ -348,6 +357,9 @@ const cmd = {
   listUserPackages: () => "pm list packages -3",
   pmInstall: (path) => `pm install -r ${path}`,
   rmFile: (path) => `rm -f ${path}`,
+  pmUninstall: (pkg) => `pm uninstall ${pkg}`,
+  // Opens the app once, the same way a launcher icon does. That clears the stopped state.
+  launchOnce: (pkg) => `monkey -p ${pkg} -c android.intent.category.LAUNCHER 1`,
 };
 
 // ---------- Parsers ----------
@@ -387,6 +399,18 @@ function parsePmPath(output) {
   return m ? m[1] : null;
 }
 
+// `dumpsys package` prints "stopped=... notLaunched=..." for each user. Android does not deliver BOOT_COMPLETED
+// to an app that was force-stopped or never opened since it was installed, until the user opens it once.
+function parseRunState(dumpsysOutput) {
+  const line = String(dumpsysOutput ?? "").split(/\r?\n/).find((l) => /\bstopped=(true|false)\b/.test(l));
+  if (!line) return { stopped: null, notLaunched: null };
+  const flag = (name) => {
+    const m = new RegExp(`\\b${name}=(true|false)\\b`).exec(line);
+    return m ? m[1] === "true" : null;
+  };
+  return { stopped: flag("stopped"), notLaunched: flag("notLaunched") };
+}
+
 // ---------- Installing a picked APK (copy to the head unit, then pm install) ----------
 
 // Checks the picked file before anything is sent to the head unit. `head` holds its first bytes.
@@ -404,8 +428,14 @@ function isOfficialApk({ size, sha256 }) {
   return size === EXPECTED_APK_BYTES && sha256 === EXPECTED_APK_SHA256;
 }
 
-// `pm install` prints "Success", or "Failure [INSTALL_FAILED_...: reason]".
-function parseInstallResult(output) {
+// `pm list packages -3` prints "package:com.x" per line. Only valid names are kept, each once, sorted.
+function parsePackageList(output) {
+  const names = String(output ?? "").split(/\r?\n/).map((l) => l.replace(/^package:/, "").trim()).filter(isValidPackageName);
+  return [...new Set(names)].sort();
+}
+
+// `pm install` and `pm uninstall` both print "Success", or "Failure [CODE: reason]".
+function parsePmResult(output) {
   const text = String(output ?? "");
   if (/^\s*Success\s*$/m.test(text)) return { ok: true, code: null };
   const m = /Failure\s*\[\s*([A-Z_]+)/.exec(text);
@@ -614,6 +644,28 @@ const CHECKS = [
     },
     async fix(ctx) {
       return [cmd.whitelistAdd(ctx.pkg)];
+    },
+  },
+  {
+    id: "launch_state",
+    title: "التشغيل بعد إعادة التشغيل",
+    needsApp: true,
+    async check(ctx) {
+      const state = parseRunState((await quietRun(ctx, cmd.dumpsysPackage(ctx.pkg))).stdout);
+      if (state.stopped === null) {
+        return { state: "info", value: "غير معروف", detail: "تعذّر قراءة حالة التشغيل من النظام، فلا يمكن التحقق من البدء التلقائي." };
+      }
+      if (state.stopped === false && state.notLaunched !== true) {
+        return { state: "ok", value: "جاهز", detail: "فُتح التطبيق من قبل، فيبدأ الزر العائم تلقائياً بعد إعادة التشغيل." };
+      }
+      return {
+        state: "fail",
+        value: state.notLaunched === true ? "لم يُفتح بعد" : "موقوف",
+        detail: "أندرويد لا يشغّل التطبيق بعد إعادة التشغيل إن لم يُفتح منذ تثبيته، أو إن أُوقف بالإجبار. الإصلاح يفتحه مرة واحدة، ثم يبدأ الزر العائم تلقائياً.",
+      };
+    },
+    async fix(ctx) {
+      return [cmd.launchOnce(ctx.pkg), "sleep 2"];
     },
   },
 ];
@@ -845,6 +897,15 @@ const ERROR_RULES = [
     steps: [
       "الصلاحية لا تُمنح إلا إذا أعلنها التطبيق في AndroidManifest.xml، فلا يمكن منحها من الكمبيوتر.",
       "ثبّت الملف من القسم 1 في القائمة الجانبية (الإصدار 1.1.6 يعلن صلاحية الإشعارات)، ثم أعد التشخيص.",
+    ],
+  },
+  {
+    id: "delete_failed",
+    match: /DELETE_FAILED/,
+    title: "تعذّر حذف التطبيق من الشاشة",
+    steps: [
+      "إن كان التطبيق مسؤول جهاز (Device Admin) فألغِ ذلك من إعدادات الأمان أولاً، ثم أعد المحاولة.",
+      "تأكد أن التطبيق ما زال مثبتاً، ثم حدّث القائمة.",
     ],
   },
   {
@@ -1255,7 +1316,7 @@ async function installApk(file) {
     progress.textContent = "تم نقل الملف إلى الشاشة ✅";
 
     const r = await runShell(cmd.pmInstall(APK_TEMP_PATH), { timeoutMs: INSTALL_TIMEOUT_MS });
-    const result = parseInstallResult(`${r.stdout}\n${r.stderr}`);
+    const result = parsePmResult(`${r.stdout}\n${r.stderr}`);
     if (!result.ok || r.error) {
       out(`لم يكتمل التثبيت${result.code ? `: ${result.code}` : ""}.`, "err");
       hints(`${r.stdout}\n${r.stderr}\n${r.error ?? ""}`);
@@ -1367,7 +1428,7 @@ async function autoFixAll() {
   if (!requireConnection()) return;
   const pkg = currentPackage();
   if (!pkg) return;
-  if (!confirm(`سيفحص الأداة التطبيق ${pkg} ويصلح كل البنود المعطلة القابلة للإصلاح.\nلن يُحذف أي تطبيق أو بيانات.\n\nمتابعة؟`)) return;
+  if (!confirm(`سيفحص الأداة التطبيق ${pkg} ويصلح كل البنود المعطلة القابلة للإصلاح.\nلن يُحذف أي تطبيق أو بيانات.\nإن لم يُفتح التطبيق منذ تثبيته أو أُوقف بالإجبار، سيُفتح مرة واحدة على الشاشة.\n\nمتابعة؟`)) return;
   out(`إصلاح تلقائي للتطبيق ${pkg}...`, "hint");
   const report = await autoFix(makeCtx(pkg));
   for (const a of report.actions) {
@@ -1470,9 +1531,75 @@ function downloadBat() {
   out("تم تنزيل سكربت BAT. يحتاج adb.exe على الكمبيوتر، ولا حاجة له إذا ثبّتّ التطبيق من هذه الصفحة.", "ok");
 }
 
-async function listApps() {
+// ---------- User-installed apps (pm list packages -3): list them, then remove the checked ones ----------
+
+let userApps = [];
+
+function renderUserApps() {
+  const list = $("userApps");
+  list.replaceChildren();
+  if (userApps.length === 0) {
+    const note = document.createElement("p");
+    note.className = "note";
+    note.textContent = "لا توجد تطبيقات مثبتة من المستخدم.";
+    list.append(note);
+    return;
+  }
+  for (const pkg of userApps) {
+    const row = document.createElement("label");
+    row.className = "app-row";
+    const check = document.createElement("input");
+    check.type = "checkbox";
+    check.value = pkg;
+    const name = document.createElement("span");
+    name.textContent = pkg;
+    row.append(check, name);
+    list.append(row);
+  }
+}
+
+// Reads the list and shows it as checkboxes. Nothing is removed here.
+async function loadUserApps() {
   if (!requireConnection()) return;
-  await runShell(cmd.listUserPackages());
+  const listed = await runShell(cmd.listUserPackages(), { quiet: true });
+  if (!listed.ok) {
+    out("تعذّر قراءة قائمة التطبيقات.", "err");
+    return;
+  }
+  userApps = parsePackageList(listed.stdout);
+  renderUserApps();
+  out(`التطبيقات المثبتة من المستخدم: ${userApps.length}`, "ok");
+}
+
+// Removes the checked apps with pm uninstall, which also deletes their data. Each removal is checked afterwards.
+async function uninstallSelected() {
+  if (!requireConnection()) return;
+  const picked = [...$("userApps").querySelectorAll("input[type=checkbox]:checked")].map((c) => c.value);
+  if (picked.length === 0) {
+    out("حدّد تطبيقاً واحداً على الأقل من القائمة.", "warn");
+    return;
+  }
+  const own = picked.includes(DEFAULT_PACKAGE)
+    ? "\nمن بينها Car_DisplayZ نفسه: ستحتاج إلى تثبيته من ملف APK بعد ذلك.\n"
+    : "";
+  const names = picked.map((p) => `- ${p}`).join("\n");
+  const question = `سيتم إلغاء تثبيت ${picked.length} تطبيق من الشاشة، مع بياناتها وإعداداتها:\n${names}\n${own}\nملف APK على الكمبيوتر لن يتأثر.\n\nمتابعة؟`;
+  if (!confirm(question)) {
+    out("ألغيت العملية. لم يُحذف شيء.", "warn");
+    return;
+  }
+  for (const pkg of picked) {
+    const r = await runShell(cmd.pmUninstall(pkg), { timeoutMs: INSTALL_TIMEOUT_MS });
+    const result = parsePmResult(`${r.stdout}\n${r.stderr}`);
+    const stillThere = parsePmPath((await runShell(cmd.pmPath(pkg), { quiet: true })).stdout);
+    if (result.ok && !r.error && !stillThere) {
+      out(`تم حذف ${pkg} ✅`, "ok");
+    } else {
+      out(`لم يُحذف ${pkg}${result.code ? `: ${result.code}` : ""}.`, "err");
+      hints(`${r.stdout}\n${r.stderr}\n${r.error ?? ""}`);
+    }
+  }
+  await loadUserApps();
 }
 
 async function grantOverlayToAll() {
@@ -1483,7 +1610,7 @@ async function grantOverlayToAll() {
     out("تعذّر قراءة قائمة التطبيقات.", "err");
     return;
   }
-  const packages = listed.stdout.split("\n").map((l) => l.replace(/^package:/, "").trim()).filter(isValidPackageName);
+  const packages = parsePackageList(listed.stdout);
   for (const p of packages) {
     const r = await runShell(cmd.appopsSet(p, "SYSTEM_ALERT_WINDOW", "allow"), { quiet: true });
     out(`${p}: ${r.ok ? "تم" : "فشل"}`, r.ok ? "" : "err");
@@ -1553,7 +1680,8 @@ $("btnDoctor").addEventListener("click", () => exclusive(doctor));
 $("btnAutoFix").addEventListener("click", () => exclusive(autoFixAll));
 $("btnBat").addEventListener("click", downloadBat);
 $("btnDecode").addEventListener("click", decode);
-$("btnListApps").addEventListener("click", () => exclusive(listApps));
+$("btnListApps").addEventListener("click", () => exclusive(loadUserApps));
+$("btnUninstall").addEventListener("click", () => exclusive(uninstallSelected));
 $("btnGrantAllOverlay").addEventListener("click", () => exclusive(grantOverlayToAll));
 $("btnStorage").addEventListener("click", () => exclusive(grantAllFiles));
 $("btnSendCmd").addEventListener("click", sendManual);

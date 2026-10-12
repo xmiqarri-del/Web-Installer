@@ -43,6 +43,9 @@ export const cmd = {
   listUserPackages: () => "pm list packages -3",
   pmInstall: (path) => `pm install -r ${path}`,
   rmFile: (path) => `rm -f ${path}`,
+  pmUninstall: (pkg) => `pm uninstall ${pkg}`,
+  // Opens the app once, the same way a launcher icon does. That clears the stopped state.
+  launchOnce: (pkg) => `monkey -p ${pkg} -c android.intent.category.LAUNCHER 1`,
 };
 
 // ---------- Parsers ----------
@@ -82,6 +85,18 @@ export function parsePmPath(output) {
   return m ? m[1] : null;
 }
 
+// `dumpsys package` prints "stopped=... notLaunched=..." for each user. Android does not deliver BOOT_COMPLETED
+// to an app that was force-stopped or never opened since it was installed, until the user opens it once.
+export function parseRunState(dumpsysOutput) {
+  const line = String(dumpsysOutput ?? "").split(/\r?\n/).find((l) => /\bstopped=(true|false)\b/.test(l));
+  if (!line) return { stopped: null, notLaunched: null };
+  const flag = (name) => {
+    const m = new RegExp(`\\b${name}=(true|false)\\b`).exec(line);
+    return m ? m[1] === "true" : null;
+  };
+  return { stopped: flag("stopped"), notLaunched: flag("notLaunched") };
+}
+
 // ---------- Installing a picked APK (copy to the head unit, then pm install) ----------
 
 // Checks the picked file before anything is sent to the head unit. `head` holds its first bytes.
@@ -99,8 +114,14 @@ export function isOfficialApk({ size, sha256 }) {
   return size === EXPECTED_APK_BYTES && sha256 === EXPECTED_APK_SHA256;
 }
 
-// `pm install` prints "Success", or "Failure [INSTALL_FAILED_...: reason]".
-export function parseInstallResult(output) {
+// `pm list packages -3` prints "package:com.x" per line. Only valid names are kept, each once, sorted.
+export function parsePackageList(output) {
+  const names = String(output ?? "").split(/\r?\n/).map((l) => l.replace(/^package:/, "").trim()).filter(isValidPackageName);
+  return [...new Set(names)].sort();
+}
+
+// `pm install` and `pm uninstall` both print "Success", or "Failure [CODE: reason]".
+export function parsePmResult(output) {
   const text = String(output ?? "");
   if (/^\s*Success\s*$/m.test(text)) return { ok: true, code: null };
   const m = /Failure\s*\[\s*([A-Z_]+)/.exec(text);
@@ -309,6 +330,28 @@ export const CHECKS = [
     },
     async fix(ctx) {
       return [cmd.whitelistAdd(ctx.pkg)];
+    },
+  },
+  {
+    id: "launch_state",
+    title: "التشغيل بعد إعادة التشغيل",
+    needsApp: true,
+    async check(ctx) {
+      const state = parseRunState((await quietRun(ctx, cmd.dumpsysPackage(ctx.pkg))).stdout);
+      if (state.stopped === null) {
+        return { state: "info", value: "غير معروف", detail: "تعذّر قراءة حالة التشغيل من النظام، فلا يمكن التحقق من البدء التلقائي." };
+      }
+      if (state.stopped === false && state.notLaunched !== true) {
+        return { state: "ok", value: "جاهز", detail: "فُتح التطبيق من قبل، فيبدأ الزر العائم تلقائياً بعد إعادة التشغيل." };
+      }
+      return {
+        state: "fail",
+        value: state.notLaunched === true ? "لم يُفتح بعد" : "موقوف",
+        detail: "أندرويد لا يشغّل التطبيق بعد إعادة التشغيل إن لم يُفتح منذ تثبيته، أو إن أُوقف بالإجبار. الإصلاح يفتحه مرة واحدة، ثم يبدأ الزر العائم تلقائياً.",
+      };
+    },
+    async fix(ctx) {
+      return [cmd.launchOnce(ctx.pkg), "sleep 2"];
     },
   },
 ];
@@ -540,6 +583,15 @@ export const ERROR_RULES = [
     steps: [
       "الصلاحية لا تُمنح إلا إذا أعلنها التطبيق في AndroidManifest.xml، فلا يمكن منحها من الكمبيوتر.",
       "ثبّت الملف من القسم 1 في القائمة الجانبية (الإصدار 1.1.6 يعلن صلاحية الإشعارات)، ثم أعد التشخيص.",
+    ],
+  },
+  {
+    id: "delete_failed",
+    match: /DELETE_FAILED/,
+    title: "تعذّر حذف التطبيق من الشاشة",
+    steps: [
+      "إن كان التطبيق مسؤول جهاز (Device Admin) فألغِ ذلك من إعدادات الأمان أولاً، ثم أعد المحاولة.",
+      "تأكد أن التطبيق ما زال مثبتاً، ثم حدّث القائمة.",
     ],
   },
   {

@@ -301,7 +301,7 @@ async function installApk(file) {
     progress.textContent = "تم نقل الملف إلى الشاشة ✅";
 
     const r = await runShell(cmd.pmInstall(APK_TEMP_PATH), { timeoutMs: INSTALL_TIMEOUT_MS });
-    const result = parseInstallResult(`${r.stdout}\n${r.stderr}`);
+    const result = parsePmResult(`${r.stdout}\n${r.stderr}`);
     if (!result.ok || r.error) {
       out(`لم يكتمل التثبيت${result.code ? `: ${result.code}` : ""}.`, "err");
       hints(`${r.stdout}\n${r.stderr}\n${r.error ?? ""}`);
@@ -413,7 +413,7 @@ async function autoFixAll() {
   if (!requireConnection()) return;
   const pkg = currentPackage();
   if (!pkg) return;
-  if (!confirm(`سيفحص الأداة التطبيق ${pkg} ويصلح كل البنود المعطلة القابلة للإصلاح.\nلن يُحذف أي تطبيق أو بيانات.\n\nمتابعة؟`)) return;
+  if (!confirm(`سيفحص الأداة التطبيق ${pkg} ويصلح كل البنود المعطلة القابلة للإصلاح.\nلن يُحذف أي تطبيق أو بيانات.\nإن لم يُفتح التطبيق منذ تثبيته أو أُوقف بالإجبار، سيُفتح مرة واحدة على الشاشة.\n\nمتابعة؟`)) return;
   out(`إصلاح تلقائي للتطبيق ${pkg}...`, "hint");
   const report = await autoFix(makeCtx(pkg));
   for (const a of report.actions) {
@@ -516,9 +516,75 @@ function downloadBat() {
   out("تم تنزيل سكربت BAT. يحتاج adb.exe على الكمبيوتر، ولا حاجة له إذا ثبّتّ التطبيق من هذه الصفحة.", "ok");
 }
 
-async function listApps() {
+// ---------- User-installed apps (pm list packages -3): list them, then remove the checked ones ----------
+
+let userApps = [];
+
+function renderUserApps() {
+  const list = $("userApps");
+  list.replaceChildren();
+  if (userApps.length === 0) {
+    const note = document.createElement("p");
+    note.className = "note";
+    note.textContent = "لا توجد تطبيقات مثبتة من المستخدم.";
+    list.append(note);
+    return;
+  }
+  for (const pkg of userApps) {
+    const row = document.createElement("label");
+    row.className = "app-row";
+    const check = document.createElement("input");
+    check.type = "checkbox";
+    check.value = pkg;
+    const name = document.createElement("span");
+    name.textContent = pkg;
+    row.append(check, name);
+    list.append(row);
+  }
+}
+
+// Reads the list and shows it as checkboxes. Nothing is removed here.
+async function loadUserApps() {
   if (!requireConnection()) return;
-  await runShell(cmd.listUserPackages());
+  const listed = await runShell(cmd.listUserPackages(), { quiet: true });
+  if (!listed.ok) {
+    out("تعذّر قراءة قائمة التطبيقات.", "err");
+    return;
+  }
+  userApps = parsePackageList(listed.stdout);
+  renderUserApps();
+  out(`التطبيقات المثبتة من المستخدم: ${userApps.length}`, "ok");
+}
+
+// Removes the checked apps with pm uninstall, which also deletes their data. Each removal is checked afterwards.
+async function uninstallSelected() {
+  if (!requireConnection()) return;
+  const picked = [...$("userApps").querySelectorAll("input[type=checkbox]:checked")].map((c) => c.value);
+  if (picked.length === 0) {
+    out("حدّد تطبيقاً واحداً على الأقل من القائمة.", "warn");
+    return;
+  }
+  const own = picked.includes(DEFAULT_PACKAGE)
+    ? "\nمن بينها Car_DisplayZ نفسه: ستحتاج إلى تثبيته من ملف APK بعد ذلك.\n"
+    : "";
+  const names = picked.map((p) => `- ${p}`).join("\n");
+  const question = `سيتم إلغاء تثبيت ${picked.length} تطبيق من الشاشة، مع بياناتها وإعداداتها:\n${names}\n${own}\nملف APK على الكمبيوتر لن يتأثر.\n\nمتابعة؟`;
+  if (!confirm(question)) {
+    out("ألغيت العملية. لم يُحذف شيء.", "warn");
+    return;
+  }
+  for (const pkg of picked) {
+    const r = await runShell(cmd.pmUninstall(pkg), { timeoutMs: INSTALL_TIMEOUT_MS });
+    const result = parsePmResult(`${r.stdout}\n${r.stderr}`);
+    const stillThere = parsePmPath((await runShell(cmd.pmPath(pkg), { quiet: true })).stdout);
+    if (result.ok && !r.error && !stillThere) {
+      out(`تم حذف ${pkg} ✅`, "ok");
+    } else {
+      out(`لم يُحذف ${pkg}${result.code ? `: ${result.code}` : ""}.`, "err");
+      hints(`${r.stdout}\n${r.stderr}\n${r.error ?? ""}`);
+    }
+  }
+  await loadUserApps();
 }
 
 async function grantOverlayToAll() {
@@ -529,7 +595,7 @@ async function grantOverlayToAll() {
     out("تعذّر قراءة قائمة التطبيقات.", "err");
     return;
   }
-  const packages = listed.stdout.split("\n").map((l) => l.replace(/^package:/, "").trim()).filter(isValidPackageName);
+  const packages = parsePackageList(listed.stdout);
   for (const p of packages) {
     const r = await runShell(cmd.appopsSet(p, "SYSTEM_ALERT_WINDOW", "allow"), { quiet: true });
     out(`${p}: ${r.ok ? "تم" : "فشل"}`, r.ok ? "" : "err");
@@ -599,7 +665,8 @@ $("btnDoctor").addEventListener("click", () => exclusive(doctor));
 $("btnAutoFix").addEventListener("click", () => exclusive(autoFixAll));
 $("btnBat").addEventListener("click", downloadBat);
 $("btnDecode").addEventListener("click", decode);
-$("btnListApps").addEventListener("click", () => exclusive(listApps));
+$("btnListApps").addEventListener("click", () => exclusive(loadUserApps));
+$("btnUninstall").addEventListener("click", () => exclusive(uninstallSelected));
 $("btnGrantAllOverlay").addEventListener("click", () => exclusive(grantOverlayToAll));
 $("btnStorage").addEventListener("click", () => exclusive(grantAllFiles));
 $("btnSendCmd").addEventListener("click", sendManual);
