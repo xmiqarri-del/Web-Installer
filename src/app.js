@@ -253,7 +253,7 @@ async function pushFile(file, onProgress) {
   }
 }
 
-async function installApk(file, { anyApp = false } = {}) {
+async function installApk(file, { anyApp = false, trusted = false } = {}) {
   if (!requireConnection()) return;
   const pkg = anyApp ? null : currentPackage();
   if (!anyApp && !pkg) return;
@@ -269,6 +269,8 @@ async function installApk(file, { anyApp = false } = {}) {
   const sha256 = await sha256Hex(file);
   if (!anyApp && isOfficialApk({ size: file.size, sha256 })) {
     out(`الملف مطابق للإصدار ${APP_VERSION} المنشور في GitHub ✅`, "ok");
+  } else if (trusted) {
+    out(`مطابق لفهرس apks (SHA-256 ${sha256})`, "ok");
   } else {
     const question = anyApp
       ? `سيُثبَّت هذا الملف كتطبيق على الشاشة.\nالأداة لا تفحص محتوى التطبيق ولا تمنحه صلاحيات.\nثبّت ملفات تثق بمصدرها فقط.\n\nمتابعة؟`
@@ -740,6 +742,78 @@ $("apkFile").addEventListener("change", () => {
   input.value = "";
   if (file) exclusive(() => installApk(file));
 });
+// ---------- Ready-made APK catalog (apks/manifest.json) ----------
+let catalogApps = [];
+
+function renderCatalog() {
+  const list = $("catalogList");
+  list.replaceChildren();
+  if (!catalogApps.length) {
+    const p = document.createElement("p");
+    p.className = "note";
+    p.textContent = "لا توجد ملفات في مجلد apks حالياً.";
+    list.append(p);
+    return;
+  }
+  for (const app of catalogApps) {
+    const label = document.createElement("label");
+    label.className = "app-row";
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.value = app.name;
+    const span = document.createElement("span");
+    span.textContent = `${app.name} (${(app.size / 1048576).toFixed(1)} MB)`;
+    label.append(box, span);
+    list.append(label);
+  }
+}
+
+async function loadCatalog() {
+  try {
+    const res = await fetch("apks/manifest.json", { cache: "no-cache" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    catalogApps = parseCatalog(await res.text()).apps;
+    renderCatalog();
+    out(`القائمة الجاهزة: ${catalogApps.length} ملف.`);
+  } catch (err) {
+    catalogApps = [];
+    renderCatalog();
+    out(`تعذّر تحميل القائمة الجاهزة: ${err.message}`, "warn");
+  }
+}
+
+async function installCatalogSelected() {
+  if (!requireConnection()) return;
+  const picked = [...$("catalogList").querySelectorAll("input[type=checkbox]:checked")].map((b) => b.value);
+  if (!picked.length) {
+    out("حدّد تطبيقاً واحداً على الأقل من القائمة.", "warn");
+    return;
+  }
+  const names = new Set(catalogApps.map((app) => app.name));
+  const byName = new Map(catalogApps.map((app) => [app.name, app]));
+  for (const name of picked) {
+    if (!names.has(name)) continue;
+    const entry = byName.get(name);
+    try {
+      const res = await fetch(`apks/${encodeURIComponent(name)}`, { cache: "no-cache" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const file = new File([await res.blob()], name, { type: "application/vnd.android.package-archive" });
+      const sha256 = await sha256Hex(file);
+      if (sha256 === null) {
+        out(`تعذّر حساب البصمة لـ ${name} (الصفحة ليست في سياق آمن). تخطّيته.`, "warn");
+        continue;
+      }
+      if (sha256 !== entry.sha256 || file.size !== entry.size) {
+        out(`البصمة لا تطابق القائمة لـ ${name}. لم يُنقل الملف.`, "err");
+        continue;
+      }
+      await installApk(file, { anyApp: true, trusted: true });
+    } catch (err) {
+      out(`تعذّر تجهيز ${name}: ${err.message}`, "err");
+    }
+  }
+}
+
 $("btnInstallOther").addEventListener("click", () => {
   if (!requireConnection()) return;
   $("apkFileOther").click();
@@ -750,6 +824,8 @@ $("apkFileOther").addEventListener("change", () => {
   input.value = "";
   if (file) exclusive(() => installApk(file, { anyApp: true }));
 });
+$("btnCatalogRefresh").addEventListener("click", loadCatalog);
+$("btnCatalogInstall").addEventListener("click", () => exclusive(installCatalogSelected));
 $("btnConnect").addEventListener("click", () => exclusive(connect));
 $("btnDisconnect").addEventListener("click", () => exclusive(disconnect));
 $("btnDoctor").addEventListener("click", () => exclusive(doctor));
