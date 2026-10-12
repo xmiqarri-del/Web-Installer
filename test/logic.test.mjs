@@ -364,3 +364,9 @@ test("home launcher: component validator accepts package/.Activity and rejects s
 test("home launcher: command is cmd package set-home-activity with the validated component", () => {
   assert.equal(L.cmd.setHome("com.example.launcher/.MainActivity"), "cmd package set-home-activity com.example.launcher/.MainActivity");
 });
+
+test("another app: the package name is the one that appeared after the install", () => {
+  assert.deepEqual(L.newlyInstalled(["com.a", "com.b"], ["com.a", "com.b", "com.new"]), ["com.new"]);
+  assert.deepEqual(L.newlyInstalled(["com.a"], ["com.a"]), []);
+  assert.deepEqual(L.newlyInstalled([], ["com.x", "com.y"]), ["com.x", "com.y"]);
+});

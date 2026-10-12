@@ -251,10 +251,10 @@ async function pushFile(file, onProgress) {
   }
 }
 
-async function installApk(file) {
+async function installApk(file, { anyApp = false } = {}) {
   if (!requireConnection()) return;
-  const pkg = currentPackage();
-  if (!pkg) return;
+  const pkg = anyApp ? null : currentPackage();
+  if (!anyApp && !pkg) return;
 
   const head = new Uint8Array(await file.slice(0, 4).arrayBuffer());
   const check = checkApkFile({ name: file.name, size: file.size, head });
@@ -265,10 +265,12 @@ async function installApk(file) {
   out(`الملف: ${file.name} (${(file.size / 1048576).toFixed(1)} ميغابايت)`);
 
   const sha256 = await sha256Hex(file);
-  if (isOfficialApk({ size: file.size, sha256 })) {
+  if (!anyApp && isOfficialApk({ size: file.size, sha256 })) {
     out(`الملف مطابق للإصدار ${APP_VERSION} المنشور في GitHub ✅`, "ok");
   } else {
-    const question = sha256 === null
+    const question = anyApp
+      ? `سيُثبَّت هذا الملف كتطبيق على الشاشة.\nالأداة لا تفحص محتوى التطبيق ولا تمنحه صلاحيات.\nثبّت ملفات تثق بمصدرها فقط.\n\nمتابعة؟`
+      : sha256 === null
       ? "تعذّر حساب بصمة الملف (SHA-256) لأن الصفحة ليست في سياق آمن.\nتأكد أنك نزّلت الملف من رابط GitHub في هذه الصفحة.\n\nمتابعة؟"
       : `هذا الملف ليس نسخة الإصدار ${APP_VERSION} المنشورة في GitHub.\nقد يفشل التثبيت، أو يكون الملف غير موثوق.\n\nمتابعة بهذا الملف؟`;
     if (!confirm(question)) {
@@ -284,6 +286,7 @@ async function installApk(file) {
     return;
   }
 
+  const before = anyApp ? parsePackageList((await runShell(cmd.listUserPackages(), { quiet: true })).stdout) : null;
   const progress = out("نقل الملف إلى الشاشة: 0%", "hint");
   let shownPct = -1;
   try {
@@ -305,6 +308,11 @@ async function installApk(file) {
     if (!result.ok || r.error) {
       out(`لم يكتمل التثبيت${result.code ? `: ${result.code}` : ""}.`, "err");
       hints(`${r.stdout}\n${r.stderr}\n${r.error ?? ""}`);
+      return;
+    }
+
+    if (anyApp) {
+      await finishOtherApp(before, file.name);
       return;
     }
 
@@ -660,6 +668,20 @@ function renderEnvironment() {
 
 // The file picker is opened by the install button. The input is reset as soon as a file is chosen,
 // so picking the same file again still fires "change".
+// Installing another app: the package name is learned from the packages that appear after the install.
+async function finishOtherApp(before, fileName) {
+  const after = parsePackageList((await runShell(cmd.listUserPackages(), { quiet: true })).stdout);
+  const added = newlyInstalled(before, after);
+  if (added.length === 1) {
+    $("pkgInput").value = added[0];
+    out(`تم تثبيت ${fileName} ✅ اسم الحزمة: ${added[0]}. افتحه على الشاشة من قائمة التطبيقات.`, "ok");
+  } else if (added.length > 1) {
+    out(`ظهرت أكثر من حزمة جديدة: ${added.join(", ")}. اختر الحزمة الصحيحة وضعها في الحقل أعلاه.`, "warn");
+  } else {
+    out("تم التثبيت، ولم تظهر حزمة جديدة. الأرجح أن التطبيق كان مثبتاً فتم تحديثه. تحقق من اسم الحزمة في الحقل أعلاه.", "warn");
+  }
+}
+
 $("btnInstall").addEventListener("click", () => {
   if (!requireConnection()) return;
   if (!currentPackage()) return;
@@ -670,6 +692,16 @@ $("apkFile").addEventListener("change", () => {
   const file = input.files?.[0];
   input.value = "";
   if (file) exclusive(() => installApk(file));
+});
+$("btnInstallOther").addEventListener("click", () => {
+  if (!requireConnection()) return;
+  $("apkFileOther").click();
+});
+$("apkFileOther").addEventListener("change", () => {
+  const input = $("apkFileOther");
+  const file = input.files?.[0];
+  input.value = "";
+  if (file) exclusive(() => installApk(file, { anyApp: true }));
 });
 $("btnConnect").addEventListener("click", () => exclusive(connect));
 $("btnDisconnect").addEventListener("click", () => exclusive(disconnect));

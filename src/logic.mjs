@@ -127,6 +127,12 @@ export function parsePackageList(output) {
   return [...new Set(names)].sort();
 }
 
+// Packages that appear after an install. Used to learn the package name of an APK the user picked.
+export function newlyInstalled(before, after) {
+  const known = new Set(before);
+  return after.filter((p) => !known.has(p));
+}
+
 // `pm install` and `pm uninstall` both print "Success", or "Failure [CODE: reason]".
 export function parsePmResult(output) {
   const text = String(output ?? "");
