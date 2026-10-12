@@ -1,4 +1,10 @@
 {
   "version": 1,
-  "apps": []
+  "apps": [
+    {
+      "name": "File-manager-v3.8.3.apk",
+      "size": 19284953,
+      "sha256": "2e0e74887d457d2c67c68045f6c3fba9a218facadeb67b8057d6b1e1389352c2"
+    }
+  ]
 }
