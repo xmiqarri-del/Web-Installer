@@ -531,3 +531,63 @@ test("phone width: the layout fits without sideways scrolling", () => withPage(
     await page.screenshot({ path: join(SHOTS, "phone-doctor.png"), fullPage: true });
   },
 ));
+
+test("phone, tablet, and laptop layouts fit their viewport and switch columns at the intended widths", async () => {
+  for (const { width, height, stacked } of [
+    { width: 390, height: 844, stacked: true },
+    { width: 768, height: 1024, stacked: true },
+    { width: 1024, height: 768, stacked: false },
+    { width: 1440, height: 900, stacked: false },
+  ]) {
+    await withPage({ viewport: { width, height } }, async (page) => {
+      await waitForText(page, "#terminal", "تشخيص الصلاحيات");
+      const layout = await page.evaluate(() => {
+        const sidebar = document.querySelector(".sidebar").getBoundingClientRect();
+        const main = document.querySelector(".main").getBoundingClientRect();
+        return {
+          overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          columnGap: Math.abs(main.top - sidebar.top),
+        };
+      });
+      assert.ok(layout.overflow <= 0, `${width}px viewport has sideways overflow of ${layout.overflow}px`);
+      assert.equal(layout.columnGap > 24, stacked, `${width}px should ${stacked ? "stack" : "use columns"}`);
+    });
+  }
+});
+
+test("the framed DisplayZ header and connection hero keep their live USB controls visible", () => withPage(
+  { viewport: { width: 390, height: 844 } },
+  async (page) => {
+    await waitForText(page, "#terminal", "تشخيص الصلاحيات");
+    assert.equal(await page.locator(".brand-link").isVisible(), true);
+    assert.equal(await page.locator(".hero-panel").isVisible(), true);
+    assert.equal(await page.locator(".connection-orbit").isVisible(), true);
+    assert.equal(await page.locator(".target-package #pkgInput").inputValue(), "com.xmiqarri.cardisplayz");
+    assert.equal(await page.locator("#connectionHelp").textContent(), "لا يوجد جهاز متصل");
+    await connectAndWait(page);
+    assert.equal(await page.locator("#connectionHelp").textContent(), "تم إنشاء اتصال USB آمن بالشاشة");
+    assert.equal(await page.isVisible("#btnDisconnect"), true);
+  },
+));
+
+test("the G700 engineer-code guide updates with firmware, region and clock selection", () => withPage(
+  { viewport: { width: 390, height: 844 } },
+  async (page) => {
+    await waitUntil(async () => /^\d{6}$/.test((await page.textContent("#engineerCode")).trim()), "six-digit engineer code");
+    assert.match((await page.textContent("#engineerCode")).trim(), /^\d{6}$/);
+    assert.equal((await page.textContent("#engineerDialCode")).trim(), "*#20240730#*");
+    await page.selectOption("#engineerVersion", "v336");
+    const dynamicCode = (await page.textContent("#engineerCode")).trim();
+    assert.match(dynamicCode, /^\d{6}$/);
+    assert.equal((await page.textContent("#engineerDialCode")).trim(), `*#${dynamicCode}#*`);
+    assert.equal(await page.locator("#engineerVersionHint").isVisible(), true);
+    await page.selectOption("#engineerVersion", "v335");
+    await page.selectOption("#engineerRegion", "ae");
+    await page.selectOption("#engineerClockOffset", "1");
+    assert.match((await page.textContent("#engineerCarTime")).trim(), /Asia\/Dubai، \+1h/);
+    assert.equal((await page.textContent("#engineerDialCode")).trim(), "*#20240730#*");
+    assert.equal(await page.locator("#adb-activation").isVisible(), true);
+    await connectAndWait(page);
+    assert.equal((await page.textContent("#statusBadge")).includes("متصل بالشاشة"), true);
+  },
+));
