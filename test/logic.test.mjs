@@ -87,14 +87,30 @@ test("only the official release file counts as official: size and SHA-256 must b
   assert.equal(L.RELEASE_APK_URL, "https://github.com/xmiqarri-del/Car_DisplayZ/releases/download/v1.1.6/Car_DisplayZ-v1.1.6.apk");
 });
 
-test("pm install output: Success, failure codes, and silence", () => {
-  assert.deepEqual(L.parseInstallResult("Performing Streamed Install\nSuccess\n"), { ok: true, code: null });
+test("pm install and pm uninstall print Success or a Failure code", () => {
+  assert.deepEqual(L.parsePmResult("Performing Streamed Install\nSuccess\n"), { ok: true, code: null });
   assert.deepEqual(
-    L.parseInstallResult("Failure [INSTALL_FAILED_UPDATE_INCOMPATIBLE: Package com.x signatures do not match]\n"),
+    L.parsePmResult("Failure [INSTALL_FAILED_UPDATE_INCOMPATIBLE: Package com.x signatures do not match]\n"),
     { ok: false, code: "INSTALL_FAILED_UPDATE_INCOMPATIBLE" },
   );
-  assert.deepEqual(L.parseInstallResult(""), { ok: false, code: null });
-  assert.deepEqual(L.parseInstallResult("Error: something else"), { ok: false, code: null });
+  assert.deepEqual(L.parsePmResult("Success\n"), { ok: true, code: null });
+  assert.deepEqual(L.parsePmResult("Failure [DELETE_FAILED_DEVICE_POLICY_MANAGER]\n"), { ok: false, code: "DELETE_FAILED_DEVICE_POLICY_MANAGER" });
+  assert.deepEqual(L.parsePmResult(""), { ok: false, code: null });
+  assert.deepEqual(L.parsePmResult("Error: something else"), { ok: false, code: null });
+});
+
+test("the user-app list keeps valid package lines only, each once, sorted", () => {
+  assert.deepEqual(
+    L.parsePackageList("package:com.xmiqarri.cardisplayz\r\npackage:com.waze\nnot a package line\npackage:com.waze\npackage:bad name\n"),
+    ["com.waze", "com.xmiqarri.cardisplayz"],
+  );
+  assert.deepEqual(L.parsePackageList(""), []);
+});
+
+test("uninstall targets exactly one package, and a refused removal is explained", () => {
+  assert.equal(L.cmd.pmUninstall("com.waze"), "pm uninstall com.waze");
+  assert.ok(L.diagnoseText("Failure [DELETE_FAILED_DEVICE_POLICY_MANAGER]").some((h) => h.id === "delete_failed"));
+  assert.ok(L.diagnoseText("Failure [DELETE_FAILED_INTERNAL_ERROR]").some((h) => h.id === "delete_failed"));
 });
 
 test("the installed version is read from dumpsys and judged against this release", () => {
@@ -286,4 +302,51 @@ test("a shell that throws becomes an error state, not a crash", async () => {
   const r = await L.runDoctor(ctx);
   assert.ok(r.every((x) => x.state === "error" || x.state === "info" || x.state === "na"));
   assert.ok(r.some((x) => x.state === "error"));
+});
+
+// ---------- Boot start: Android starts an app after reboot only once it has been opened ----------
+
+test("the run state is read from dumpsys: stopped and notLaunched flags", () => {
+  const line = (stopped, notLaunched) =>
+    `    User 0: ceDataInode=0 installed=true hidden=false suspended=false distractionFlags=0 ` +
+    `stopped=${stopped} notLaunched=${notLaunched} enabled=0 instant=false virtual=false`;
+  assert.deepEqual(L.parseRunState(line("false", "false")), { stopped: false, notLaunched: false });
+  assert.deepEqual(L.parseRunState(line("true", "false")), { stopped: true, notLaunched: false });
+  assert.deepEqual(L.parseRunState(line("true", "true")), { stopped: true, notLaunched: true });
+  assert.deepEqual(L.parseRunState("    versionCode=8\n"), { stopped: null, notLaunched: null });
+  assert.deepEqual(L.parseRunState(""), { stopped: null, notLaunched: null });
+});
+
+test("a never-opened or force-stopped app is flagged, and the launch fix opens it once", async () => {
+  const fresh = makeDevice({ stopped: true, notLaunched: true });
+  const r = byId(await L.runDoctor(fresh.ctx));
+  assert.equal(r.launch_state.state, "fail");
+  assert.equal(r.launch_state.value, "لم يُفتح بعد");
+  assert.equal(r.launch_state.fixable, true);
+  const fixed = await L.applyFix(fresh.ctx, "launch_state");
+  assert.equal(fixed.fixed, true);
+  assert.deepEqual(fresh.state.launches, [PKG]);
+  assert.ok(fresh.state.commands.includes(`monkey -p ${PKG} -c android.intent.category.LAUNCHER 1`));
+  assert.equal(fresh.state.stopped, false);
+
+  const stopped = makeDevice({ stopped: true });
+  const s = byId(await L.runDoctor(stopped.ctx));
+  assert.equal(s.launch_state.state, "fail");
+  assert.equal(s.launch_state.value, "موقوف");
+});
+
+test("an app that was opened before is fine, and the boot check is skipped without the app", async () => {
+  const opened = byId(await L.runDoctor(makeDevice().ctx));
+  assert.equal(opened.launch_state.state, "ok");
+  const none = byId(await L.runDoctor(makeDevice({ installed: false }).ctx));
+  assert.equal(none.launch_state.state, "na");
+});
+
+test("auto-fix opens a never-opened app last, after the permission fixes", async () => {
+  const dev = makeDevice({ services: "com.other/.Svc", stopped: true, notLaunched: true });
+  const report = await L.autoFix(dev.ctx);
+  const ids = report.actions.map((a) => a.id);
+  assert.equal(ids[ids.length - 1], "launch_state", ids.join(","));
+  assert.ok(report.actions.every((a) => a.fixed), JSON.stringify(report.actions.map((a) => [a.id, a.after.state])));
+  assert.deepEqual(dev.state.launches, [PKG]);
 });
