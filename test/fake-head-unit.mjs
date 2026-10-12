@@ -9,7 +9,7 @@ export function makeHeadUnit(opts = {}) {
     sdk: opts.sdk ?? 33,
     model: opts.model ?? "JetourG700",
     installed: opts.installed ?? true,
-    version: { name: opts.versionName ?? "1.1.6", code: opts.versionCode ?? 8 },
+    version: { name: opts.versionName ?? "1.1.7", code: opts.versionCode ?? 9 },
     installFailure: opts.installFailure ?? null,   // e.g. "INSTALL_FAILED_UPDATE_INCOMPATIBLE"
     appops: { ...(opts.appops ?? {}) },
     settings: {
@@ -18,8 +18,14 @@ export function makeHeadUnit(opts = {}) {
     },
     granted: {},
     whitelist: [...(opts.whitelist ?? [])],
-    userPackages: [...(opts.userPackages ?? ["com.xmiqarri.cardisplayz", "com.waze"])],
+    userPackages: [...(opts.userPackages ?? (opts.installed === false ? ["com.waze"] : ["com.xmiqarri.cardisplayz", "com.waze"]))],
     failPmGrant: opts.failPmGrant ?? false,
+    uninstallFailure: opts.uninstallFailure ?? null,   // e.g. "DELETE_FAILED_DEVICE_POLICY_MANAGER"
+    uninstalls: [],
+    // Android ignores BOOT_COMPLETED for an app that is stopped (force-stopped, or never opened since install).
+    stopped: opts.stopped ?? false,
+    notLaunched: opts.notLaunched ?? false,
+    launches: [],
     staged: {},      // files pushed through the sync service, by path
     pushes: [],
     syncDisposed: 0,
@@ -35,7 +41,8 @@ export function makeHeadUnit(opts = {}) {
     if (command === "getprop ro.build.version.sdk") return ok(`${state.sdk}\n`);
     if (command === "getprop ro.product.model") return ok(`${state.model}\n`);
     if ((m = /^pm path (\S+)$/.exec(command))) {
-      return state.installed ? ok(`package:/data/app/${m[1]}/base.apk\n`) : ok("", 1);
+      const present = m[1] === "com.xmiqarri.cardisplayz" ? state.installed : state.userPackages.includes(m[1]);
+      return present ? ok(`package:/data/app/${m[1]}/base.apk\n`) : ok("", 1);
     }
     if (command === "pm list packages -3") {
       return ok(state.userPackages.map((p) => `package:${p}\n`).join(""));
@@ -50,11 +57,35 @@ export function makeHeadUnit(opts = {}) {
       if (state.installed && Number(meta[3]) < state.version.code) {
         return fail("Failure [INSTALL_FAILED_VERSION_DOWNGRADE: Downgrade detected]");
       }
+      if (!state.installed) {   // a new install stays stopped until the user opens the app once
+        state.stopped = true;
+        state.notLaunched = true;
+      }
       state.installed = true;
       state.version = { name: meta[2], code: Number(meta[3]) };
       state.installs.push(meta[1]);
+      if (!state.userPackages.includes(meta[1])) state.userPackages.push(meta[1]);
       return ok("Performing Streamed Install\nSuccess\n");
     }
+    if ((m = /^pm uninstall (\S+)$/.exec(command))) {
+      if (state.uninstallFailure) return fail(`Failure [${state.uninstallFailure}]`);
+      if (!state.userPackages.includes(m[1])) return fail("Failure [DELETE_FAILED_INTERNAL_ERROR]");
+      state.userPackages = state.userPackages.filter((p) => p !== m[1]);
+      if (m[1] === "com.xmiqarri.cardisplayz") state.installed = false;
+      state.uninstalls.push(m[1]);
+      return ok("Success\n");
+    }
+    if ((m = /^monkey -p (\S+) -c android\.intent\.category\.LAUNCHER 1$/.exec(command))) {
+      const known = m[1] === "com.xmiqarri.cardisplayz" ? state.installed : state.userPackages.includes(m[1]);
+      if (!known) return fail("** No activities found to run, monkey aborted.");
+      if (m[1] === "com.xmiqarri.cardisplayz") {
+        state.stopped = false;
+        state.notLaunched = false;
+      }
+      state.launches.push(m[1]);
+      return ok("Events injected: 1\n");
+    }
+    if (/^sleep \d+$/.test(command)) return ok("");
     if ((m = /^rm -f (\S+)$/.exec(command))) {
       delete state.staged[m[1]];
       state.removed.push(m[1]);
@@ -87,6 +118,8 @@ export function makeHeadUnit(opts = {}) {
       return ok(
         `    versionCode=${state.version.code} minSdk=30 targetSdk=33\n` +
         `    versionName=${state.version.name}\n` +
+        `    User 0: ceDataInode=0 installed=true hidden=false suspended=false distractionFlags=0 ` +
+        `stopped=${state.stopped} notLaunched=${state.notLaunched} enabled=0 instant=false virtual=false\n` +
         `android.permission.POST_NOTIFICATIONS: granted=${g}, flags=[ USER_SET ]\n`,
       );
     }

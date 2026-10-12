@@ -108,6 +108,9 @@
         .note { margin: 0; font-size: 13px; line-height: 1.6; padding: 8px 10px; border-radius: 8px; background: var(--panel-2); }
         .note.fail { border-right: 3px solid var(--danger); }
         .note.warn { border-right: 3px solid var(--warn); }
+        .app-list { display: flex; flex-direction: column; gap: 6px; max-height: 240px; overflow-y: auto; }
+        .app-row { display: flex; align-items: center; gap: 10px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-family: Consolas, 'Courier New', monospace; font-size: 13px; direction: ltr; text-align: left; cursor: pointer; }
+        .app-row input { accent-color: var(--danger); width: 16px; height: 16px; flex: none; margin: 0; }
 
         .pkg-input {
             width: 100%;
@@ -235,7 +238,7 @@
 
     <aside class="sidebar">
         <h1>Car_DisplayZ WebInstaller</h1>
-        <div class="version">الإصدار 3.1 | Car_DisplayZ 1.1.6 | Jetour G700</div>
+        <div class="version">الإصدار 3.1 | Car_DisplayZ 1.1.7 | Jetour G700</div>
 
         <div class="status-badge" id="statusBadge">غير متصل ❌</div>
         <button class="btn btn-success action" id="btnConnect">🔌 توصيل الشاشة (WebUSB)</button>
@@ -251,7 +254,7 @@
         <section class="section">
             <h2>1. تثبيت التطبيق على الشاشة (بدون adb)</h2>
             <p class="note">نزّل ملف APK من GitHub على هذا الكمبيوتر، ثم اضغط زر التثبيت واختر الملف. الأداة تنقله إلى الشاشة وتثبّته، وتتحقق من الإصدار بعد ذلك.</p>
-            <a class="btn btn-outline" id="apkLink" href="https://github.com/xmiqarri-del/Car_DisplayZ/releases/download/v1.1.6/Car_DisplayZ-v1.1.6.apk" target="_blank" rel="noopener">⬇️ تنزيل APK الإصدار 1.1.6</a>
+            <a class="btn btn-outline" id="apkLink" href="https://github.com/xmiqarri-del/Car_DisplayZ/releases/download/v1.1.7/Car_DisplayZ-v1.1.7.apk" target="_blank" rel="noopener">⬇️ تنزيل APK الإصدار 1.1.7</a>
             <button class="btn btn-success action" id="btnInstall">📲 تثبيت ملف APK على الشاشة</button>
             <input type="file" id="apkFile" accept=".apk,application/vnd.android.package-archive" hidden>
         </section>
@@ -263,13 +266,19 @@
         </section>
 
         <section class="section">
-            <h2>3. أدوات</h2>
-            <button class="btn btn-muted action" id="btnListApps">📦 التطبيقات المثبتة (من المستخدم)</button>
+            <h2>3. التطبيقات المثبتة من المستخدم</h2>
+            <button class="btn btn-muted action" id="btnListApps">📦 تحديث القائمة</button>
+            <div class="app-list" id="userApps"><p class="note">اضغط "تحديث القائمة" لعرض التطبيقات المثبتة.</p></div>
+            <button class="btn btn-danger action" id="btnUninstall">🗑️ حذف المحدد من الشاشة</button>
+        </section>
+
+        <section class="section">
+            <h2>4. أدوات</h2>
             <button class="btn btn-outline" id="btnBat">📥 سكربت BAT (يحتاج adb.exe على الكمبيوتر)</button>
         </section>
 
         <section class="section">
-            <h2>4. أدوات متقدمة (خطيرة)</h2>
+            <h2>5. أدوات متقدمة (خطيرة)</h2>
             <button class="btn btn-purple action" id="btnGrantAllOverlay">🌟 الظهور فوق الشاشة لكل التطبيقات</button>
             <button class="btn btn-purple action" id="btnStorage">📁 صلاحية كل الملفات لتطبيق محدد</button>
         </section>

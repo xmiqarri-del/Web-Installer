@@ -3,16 +3,16 @@
 // and inlines this file into the single HTML page.
 
 export const DEFAULT_PACKAGE = "com.xmiqarri.cardisplayz";
-export const APP_VERSION = "1.1.6";
+export const APP_VERSION = "1.1.7";
 export const MIN_SDK = 30;      // Android 11 (minSdk in app/build.gradle.kts)
 export const NOTIFY_SDK = 33;   // POST_NOTIFICATIONS is a runtime permission from Android 13
 
 // The official APK of the release above. The values come from the release's update.json,
 // and the APK itself was downloaded and its SHA-256 checked against them.
-export const EXPECTED_VERSION_CODE = 8;
+export const EXPECTED_VERSION_CODE = 9;
 export const EXPECTED_APK_NAME = `Car_DisplayZ-v${APP_VERSION}.apk`;
-export const EXPECTED_APK_BYTES = 7009149;
-export const EXPECTED_APK_SHA256 = "91532fd903f63414ba365e8406b1ee84d28843c38931b070c89a10a8b398ff4d";
+export const EXPECTED_APK_BYTES = 7009813;
+export const EXPECTED_APK_SHA256 = "b5b1f6acc5c9f300f7451522cd0e0ffd548da17d19575c4d59652c888618730a";
 export const RELEASE_APK_URL = `https://github.com/xmiqarri-del/Car_DisplayZ/releases/download/v${APP_VERSION}/${EXPECTED_APK_NAME}`;
 export const MAX_APK_BYTES = 200 * 1024 * 1024;  // same limit as the app's own updater
 // Fixed scratch path on the head unit for the APK being installed (never built from user input).
@@ -43,6 +43,9 @@ export const cmd = {
   listUserPackages: () => "pm list packages -3",
   pmInstall: (path) => `pm install -r ${path}`,
   rmFile: (path) => `rm -f ${path}`,
+  pmUninstall: (pkg) => `pm uninstall ${pkg}`,
+  // Opens the app once, the same way a launcher icon does. That clears the stopped state.
+  launchOnce: (pkg) => `monkey -p ${pkg} -c android.intent.category.LAUNCHER 1`,
 };
 
 // ---------- Parsers ----------
@@ -82,6 +85,18 @@ export function parsePmPath(output) {
   return m ? m[1] : null;
 }
 
+// `dumpsys package` prints "stopped=... notLaunched=..." for each user. Android does not deliver BOOT_COMPLETED
+// to an app that was force-stopped or never opened since it was installed, until the user opens it once.
+export function parseRunState(dumpsysOutput) {
+  const line = String(dumpsysOutput ?? "").split(/\r?\n/).find((l) => /\bstopped=(true|false)\b/.test(l));
+  if (!line) return { stopped: null, notLaunched: null };
+  const flag = (name) => {
+    const m = new RegExp(`\\b${name}=(true|false)\\b`).exec(line);
+    return m ? m[1] === "true" : null;
+  };
+  return { stopped: flag("stopped"), notLaunched: flag("notLaunched") };
+}
+
 // ---------- Installing a picked APK (copy to the head unit, then pm install) ----------
 
 // Checks the picked file before anything is sent to the head unit. `head` holds its first bytes.
@@ -99,15 +114,21 @@ export function isOfficialApk({ size, sha256 }) {
   return size === EXPECTED_APK_BYTES && sha256 === EXPECTED_APK_SHA256;
 }
 
-// `pm install` prints "Success", or "Failure [INSTALL_FAILED_...: reason]".
-export function parseInstallResult(output) {
+// `pm list packages -3` prints "package:com.x" per line. Only valid names are kept, each once, sorted.
+export function parsePackageList(output) {
+  const names = String(output ?? "").split(/\r?\n/).map((l) => l.replace(/^package:/, "").trim()).filter(isValidPackageName);
+  return [...new Set(names)].sort();
+}
+
+// `pm install` and `pm uninstall` both print "Success", or "Failure [CODE: reason]".
+export function parsePmResult(output) {
   const text = String(output ?? "");
   if (/^\s*Success\s*$/m.test(text)) return { ok: true, code: null };
   const m = /Failure\s*\[\s*([A-Z_]+)/.exec(text);
   return { ok: false, code: m ? m[1] : null };
 }
 
-// From `dumpsys package`: "    versionCode=8 minSdk=30 ..." and "    versionName=1.1.6".
+// From `dumpsys package`: "    versionCode=9 minSdk=30 ..." and "    versionName=1.1.7".
 export function parseVersion(dumpsysOutput) {
   const text = String(dumpsysOutput ?? "");
   const name = /^\s*versionName=(\S+)/m.exec(text);
@@ -309,6 +330,28 @@ export const CHECKS = [
     },
     async fix(ctx) {
       return [cmd.whitelistAdd(ctx.pkg)];
+    },
+  },
+  {
+    id: "launch_state",
+    title: "التشغيل بعد إعادة التشغيل",
+    needsApp: true,
+    async check(ctx) {
+      const state = parseRunState((await quietRun(ctx, cmd.dumpsysPackage(ctx.pkg))).stdout);
+      if (state.stopped === null) {
+        return { state: "info", value: "غير معروف", detail: "تعذّر قراءة حالة التشغيل من النظام، فلا يمكن التحقق من البدء التلقائي." };
+      }
+      if (state.stopped === false && state.notLaunched !== true) {
+        return { state: "ok", value: "جاهز", detail: "فُتح التطبيق من قبل، فيبدأ الزر العائم تلقائياً بعد إعادة التشغيل." };
+      }
+      return {
+        state: "fail",
+        value: state.notLaunched === true ? "لم يُفتح بعد" : "موقوف",
+        detail: "أندرويد لا يشغّل التطبيق بعد إعادة التشغيل إن لم يُفتح منذ تثبيته، أو إن أُوقف بالإجبار. الإصلاح يفتحه مرة واحدة، ثم يبدأ الزر العائم تلقائياً.",
+      };
+    },
+    async fix(ctx) {
+      return [cmd.launchOnce(ctx.pkg), "sleep 2"];
     },
   },
 ];
@@ -539,7 +582,16 @@ export const ERROR_RULES = [
     title: "التطبيق المثبّت لا يطلب هذه الصلاحية",
     steps: [
       "الصلاحية لا تُمنح إلا إذا أعلنها التطبيق في AndroidManifest.xml، فلا يمكن منحها من الكمبيوتر.",
-      "ثبّت الملف من القسم 1 في القائمة الجانبية (الإصدار 1.1.6 يعلن صلاحية الإشعارات)، ثم أعد التشخيص.",
+      "ثبّت الملف من القسم 1 في القائمة الجانبية (الإصدار 1.1.7 يعلن صلاحية الإشعارات)، ثم أعد التشخيص.",
+    ],
+  },
+  {
+    id: "delete_failed",
+    match: /DELETE_FAILED/,
+    title: "تعذّر حذف التطبيق من الشاشة",
+    steps: [
+      "إن كان التطبيق مسؤول جهاز (Device Admin) فألغِ ذلك من إعدادات الأمان أولاً، ثم أعد المحاولة.",
+      "تأكد أن التطبيق ما زال مثبتاً، ثم حدّث القائمة.",
     ],
   },
   {
