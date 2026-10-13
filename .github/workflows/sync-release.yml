@@ -1,0 +1,53 @@
+# Follows Car_DisplayZ releases: when a newer release is published, it updates the pinned version,
+# size and SHA-256 in src/logic.mjs, rebuilds index.html, runs the tests and pushes to main.
+name: Sync Car_DisplayZ release
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-release
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Check the latest Car_DisplayZ release
+        id: sync
+        run: node scripts/sync-release.mjs
+
+      - name: Install dependencies
+        if: steps.sync.outputs.changed == 'true'
+        run: npm ci
+
+      - name: Install Chromium for the browser tests
+        if: steps.sync.outputs.changed == 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Build and test
+        if: steps.sync.outputs.changed == 'true'
+        run: |
+          npm run build
+          npm test
+
+      - name: Commit and push
+        if: steps.sync.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/logic.mjs index.html
+          git commit -m "Follow Car_DisplayZ v${{ steps.sync.outputs.version }}"
+          git push

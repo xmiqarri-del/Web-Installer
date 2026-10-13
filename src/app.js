@@ -841,6 +841,11 @@ $("btnSendCmd").addEventListener("click", sendManual);
 $("cmdInput").addEventListener("keydown", (e) => { if (e.key === "Enter") sendManual(); });
 
 setConnected(false);
+{
+  // The download link and its label come from the release block in logic.mjs, so they follow new releases.
+  const apkLink = $("apkLink");
+  if (apkLink) { apkLink.href = RELEASE_APK_URL; apkLink.textContent = `⬇️ تنزيل APK الإصدار ${APP_VERSION}`; }
+}
 renderEnvironment();
 renderLog();
 out("Car_DisplayZ WebInstaller 3.1 (c) 2026 Abu Tala. All rights reserved.");
