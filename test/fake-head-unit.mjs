@@ -9,7 +9,7 @@ export function makeHeadUnit(opts = {}) {
     sdk: opts.sdk ?? 33,
     model: opts.model ?? "JetourG700",
     installed: opts.installed ?? true,
-    version: { name: opts.versionName ?? "1.1.7", code: opts.versionCode ?? 9 },
+    version: { name: opts.versionName ?? "1.1.8", code: opts.versionCode ?? 10 },
     installFailure: opts.installFailure ?? null,   // e.g. "INSTALL_FAILED_UPDATE_INCOMPATIBLE"
     appops: { ...(opts.appops ?? {}) },
     settings: {
