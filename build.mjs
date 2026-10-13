@@ -25,14 +25,15 @@ export function assemble(template, logicSource, appSource, themeSource = "", cod
 }
 
 export async function build() {
-  const [template, logic, app, theme, codegen] = await Promise.all([
+  const [template, logic, app, theme, codegen, developer] = await Promise.all([
     readFile(join(here, "src", "template.html"), "utf8"),
     readFile(join(here, "src", "logic.mjs"), "utf8"),
     readFile(join(here, "src", "app.js"), "utf8"),
     readFile(join(here, "src", "theme.css"), "utf8"),
     readFile(join(here, "src", "codegen.mjs"), "utf8"),
+    readFile(join(here, "src", "developer.js"), "utf8"),
   ]);
-  const html = assemble(template, logic, app, theme, codegen);
+  const html = assemble(template, logic, `${app}\n${developer}`, theme, codegen);
   await writeFile(OUT_FILE, html, "utf8");
   return { out: OUT_FILE, bytes: Buffer.byteLength(html, "utf8") };
 }

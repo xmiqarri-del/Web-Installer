@@ -354,3 +354,15 @@ details[open] { background: #f6faf7; } details summary { color: #364843; font-we
   .engineer-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .engineer-controls label:last-child { grid-column: 1 / -1; }
 }
+
+/* ---------- بوابة المطور ---------- */
+.developer-panel { grid-column: 1 / -1; padding: 22px clamp(16px, 4vw, 40px); }
+.developer-panel[hidden] { display: none !important; }
+.developer-heading h1 { margin: 6px 0 8px; font-size: clamp(1.5rem, 3vw, 2rem); color: #1f3430; }
+.dev-intro, .dev-note { color: #51635f; font-size: .92rem; line-height: 1.7; }
+.dev-warning { margin: 10px 0 0; padding: 12px 14px; border-radius: 13px; background: #fff7e6; border: 1px solid #f1d9a6; color: #6b4e12; font-size: .88rem; line-height: 1.7; }
+.dev-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 12px; }
+.dev-actions .btn:disabled { opacity: .45; }
+.dev-status { min-height: 1.4em; color: #a94e49; font-size: .9rem; }
+.dev-terminal { width: 100%; height: 440px; border-radius: 16px; overflow: hidden; background: #1e1e1e; padding: 10px; box-sizing: border-box; direction: ltr; }
+.dev-note code { direction: ltr; unicode-bidi: isolate; }
