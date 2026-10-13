@@ -494,7 +494,7 @@ details[open] { background: #f6faf7; } details summary { color: #364843; font-we
         <section class="section install-section" id="install-card">
             <h2>1. تثبيت التطبيق على الشاشة (بدون adb)</h2>
             <p class="note">نزّل ملف APK من GitHub على هذا الكمبيوتر، ثم اضغط زر التثبيت واختر الملف. الأداة تنقله إلى الشاشة وتثبّته، وتتحقق من الإصدار بعد ذلك.</p>
-            <a class="btn btn-outline" id="apkLink" href="https://github.com/xmiqarri-del/Car_DisplayZ/releases/download/v1.1.8/Car_DisplayZ-v1.1.8.apk" target="_blank" rel="noopener">⬇️ تنزيل APK الإصدار 1.1.8</a>
+            <a class="btn btn-outline" id="apkLink" href="#" target="_blank" rel="noopener">⬇️ تنزيل APK</a>
             <button class="btn btn-success action" id="btnInstall">📲 تثبيت ملف APK على الشاشة</button>
             <input type="file" id="apkFile" accept=".apk,application/vnd.android.package-archive" hidden>
         </section>
@@ -588,16 +588,17 @@ details[open] { background: #f6faf7; } details summary { color: #364843; font-we
 // and inlines this file into the single HTML page.
 
 const DEFAULT_PACKAGE = "com.xmiqarri.cardisplayz";
-const APP_VERSION = "1.1.8";
 const MIN_SDK = 30;      // Android 11 (minSdk in app/build.gradle.kts)
 const NOTIFY_SDK = 33;   // POST_NOTIFICATIONS is a runtime permission from Android 13
 
-// The official APK of the release above. The values come from the release's update.json,
-// and the APK itself was downloaded and its SHA-256 checked against them.
+// RELEASE:BEGIN — rewritten by scripts/sync-release.mjs when a new Car_DisplayZ release is published.
+// The values come from that release's update.json; the APK itself is checked against them.
+const APP_VERSION = "1.1.8";
 const EXPECTED_VERSION_CODE = 10;
-const EXPECTED_APK_NAME = `Car_DisplayZ-v${APP_VERSION}.apk`;
 const EXPECTED_APK_BYTES = 7016753;
 const EXPECTED_APK_SHA256 = "04aed69855cea4ce3d5fa34cabd8ebf00c6dde8a83f38b009dedb7c89b77fb81";
+// RELEASE:END
+const EXPECTED_APK_NAME = `Car_DisplayZ-v${APP_VERSION}.apk`;
 const RELEASE_APK_URL = `https://github.com/xmiqarri-del/Car_DisplayZ/releases/download/v${APP_VERSION}/${EXPECTED_APK_NAME}`;
 const MAX_APK_BYTES = 200 * 1024 * 1024;  // same limit as the app's own updater
 // Fixed scratch path on the head unit for the APK being installed (never built from user input).
@@ -2279,6 +2280,11 @@ $("btnSendCmd").addEventListener("click", sendManual);
 $("cmdInput").addEventListener("keydown", (e) => { if (e.key === "Enter") sendManual(); });
 
 setConnected(false);
+{
+  // The download link and its label come from the release block in logic.mjs, so they follow new releases.
+  const apkLink = $("apkLink");
+  if (apkLink) { apkLink.href = RELEASE_APK_URL; apkLink.textContent = `⬇️ تنزيل APK الإصدار ${APP_VERSION}`; }
+}
 renderEnvironment();
 renderLog();
 out("Car_DisplayZ WebInstaller 3.1 (c) 2026 Abu Tala. All rights reserved.");
