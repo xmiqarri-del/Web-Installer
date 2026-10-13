@@ -2410,6 +2410,23 @@ term.open(document.getElementById('dev-terminal'));
 term.writeln('\x1b[1;36m[نظام V8 المتكامل]: جاهز للتشغيل والتواصل مع الأجهزة.\x1b[0m');
 term.writeln('------------------------------------------------------\r\n');
 
+// Ctrl+C مع وجود تحديد في الشاشة = نسخ، وليس إشارة إيقاف للجهاز.
+// (Ctrl+Shift+C ينسخ دائماً، والإيقاف يبقى متاحاً من Ctrl+C بدون تحديد.)
+term.attachCustomKeyEventHandler((e) => {
+  const isCopy = e.type === 'keydown' && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c';
+  if (!isCopy) return true;
+  if (!term.hasSelection() && !e.shiftKey) return true;
+  const text = term.getSelection();
+  if (text) {
+    navigator.clipboard?.writeText(text)
+      .then(() => printInfo('[نسخ]: تم نسخ النص المحدد.'))
+      .catch(() => printError('[نسخ]: تعذّر الوصول إلى الحافظة. جرّب النسخ بالزر الأيمن.'));
+  }
+  return false;   // لا نرسل هذا الضغط إلى الجهاز
+});
+
+let notConnectedWarned = false;
+
 function isConnected() { return device !== null && device.opened; }
 function printError(msg) { term.writeln(`\x1b[31m${msg}\x1b[0m\r\n`); }
 function printInfo(msg) { term.writeln(`\x1b[33m${msg}\x1b[0m\r\n`); }
@@ -2445,7 +2462,13 @@ function queueTerminalRender(chunk) {
 // ==============================
 term.onData(data => {
   if (data.startsWith('\x1b')) return;
-  if (!isConnected()) return;
+  if (!isConnected()) {
+    if (!notConnectedWarned) {
+      notConnectedWarned = true;
+      printInfo('[تنبيه]: الجهاز غير متصل. اضغط "توصيل الجهاز" أولاً ثم اكتب أو الصق الأمر.');
+    }
+    return;
+  }
 
   for (const ch of data) {
     if (ch === '\r') {
@@ -2484,8 +2507,10 @@ connectBtn.addEventListener('click', async () => {
     await device.open();
     if (device.configuration === null) await device.selectConfiguration(1);
     await device.claimInterface(INTERFACE_NUMBER);
-    
+    notConnectedWarned = false;
+
     printInfo(`[نجاح]: تم الاتصال بجهاز ${device.productName}`);
+    dumpEndpoints();
     
     abortController = new AbortController();
     startUsbStreamPipeline();
@@ -2596,12 +2621,26 @@ async function startUsbStreamPipeline() {
   }
 }
 
+// يعرض نقاط النهاية الموجودة فعلياً في الواجهة المحجوزة، لمعرفة القيم الصحيحة
+function dumpEndpoints() {
+  try {
+    const iface = device.configuration.interfaces.find(i => i.interfaceNumber === INTERFACE_NUMBER);
+    const alt = iface && iface.alternate;
+    if (!alt) return;
+    const list = alt.endpoints.map(e => `${e.direction.toUpperCase()}=${e.endpointNumber}`).join('  ');
+    printInfo(`[الواجهة ${INTERFACE_NUMBER}]: نقاط النهاية المتاحة: ${list || 'لا توجد'}`);
+  } catch (_) { /* تجاهل: مجرد معلومات تشخيصية */ }
+}
+
 async function sendRaw(text) {
   if (!isConnected()) return;
   try {
     await device.transferOut(ENDPOINT_OUT, encoder.encode(text));
   } catch (error) {
     printError(`[فشل الإرسال]: ${error.message}`);
+    if (/claimed/i.test(error.message)) {
+      printError(`[تلميح]: ENDPOINT_OUT=${ENDPOINT_OUT} غير موجود في الواجهة المحجوزة. راجع نقاط النهاية أعلاه وعدّل الثوابت في أعلى src/developer.js.`);
+    }
   }
 }
 
