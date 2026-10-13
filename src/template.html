@@ -21,6 +21,7 @@
             <a class="active" href="#installer">المثبّت</a>
             <a href="#adb-activation">تهيئة ADB</a>
             <a href="#dashboard">التشخيص</a>
+            <a href="#developer" id="navDeveloper">المطور</a>
         </nav>
         <div class="header-meta">JETOUR G700 <span>·</span> v3.1</div>
     </header>
@@ -225,6 +226,25 @@
             <button id="btnSendCmd" class="action">إرسال ↵</button>
         </div>
     </main>
+
+    <section class="developer-panel" id="developer" aria-labelledby="devTitle" hidden>
+        <header class="developer-heading">
+            <p class="hero-eyebrow">WEBUSB TERMINAL · ADVANCED</p>
+            <h1 id="devTitle">بوابة المطور</h1>
+            <p class="dev-intro">Terminal يعمل مع أي جهاز USB يدعم نقل البيانات المخصص. يُغلق اتصال الشاشة تلقائياً عند الدخول إلى هذه البوابة، ويُغلق اتصال الترمينال عند الرجوع.</p>
+            <p class="dev-warning"><strong>قيود:</strong> السجل المحفوظ على القرص لا يكتمل إلا عند «إنهاء الحفظ» أو فصل الجهاز، فقد يُفقد عند انهيار المتصفح. وقد يتوقف الاستقبال بصمت إذا جُمّد التبويب، لذلك أبقِ النافذة في المقدمة. تعمل في Chrome أو Edge فقط.</p>
+        </header>
+        <div class="dev-actions">
+            <button class="btn btn-success" id="dev-connect-btn">🔌 توصيل الجهاز</button>
+            <button class="btn btn-danger" id="dev-disconnect-btn" disabled>❌ فصل الجهاز</button>
+            <button class="btn btn-outline" id="dev-log-btn" disabled>💾 حفظ السجل محلياً</button>
+            <button class="btn btn-muted" id="dev-log-close-btn" style="display:none;">إنهاء الحفظ</button>
+            <button class="btn btn-purple" id="dev-ai-btn" disabled>🤖 تحليل الأخطاء (AI)</button>
+        </div>
+        <p class="dev-status" id="dev-status" role="status" aria-live="polite"></p>
+        <div class="dev-terminal" id="dev-terminal"></div>
+        <p class="dev-note">تحليل الأخطاء يرسل آخر 1500 حرف إلى LM Studio على <code>127.0.0.1:1234</code>، ويتطلب تفعيل CORS فيه. إذا رفض الخادم اسم النموذج <code>local-model</code>، استبدله باسم النموذج المحمّل في LM Studio.</p>
+    </section>
 
     <script type="module">
 /*__BUILD__*/
