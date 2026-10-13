@@ -1,12 +1,13 @@
 // Stand-ins for the three @yume-chan modules that the page loads from jsDelivr.
 // The browser tests serve these through page.route, so the real page code runs against a simulated head unit.
 import { makeHeadUnit } from "./fake-head-unit.mjs";
+import { APP_VERSION, EXPECTED_VERSION_CODE } from "../src/logic.mjs";
 
 export function fakeModules({ headUnit = {}, auth = "ok", request = "ok", noWebUsb = false, noShellV2 = false, syncFailure = null } = {}) {
   const options = JSON.stringify({ auth, request, noWebUsb, noShellV2, syncFailure });
 
   const adb = `
-const HU = (${makeHeadUnit.toString()})(${JSON.stringify(headUnit)});
+const HU = (${makeHeadUnit.toString()})(${JSON.stringify({ versionName: APP_VERSION, versionCode: EXPECTED_VERSION_CODE, ...headUnit })});
 window.__cdzHeadUnit = HU.state;
 const OPTS = ${options};
 
