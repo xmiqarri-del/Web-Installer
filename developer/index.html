@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بوابة أوامر WebUSB الذكية</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 100%; max-width: 900px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); box-sizing: border-box; }
+        h1 { font-size: 1.5rem; color: #333; text-align: center; margin-top: 0; }
+        .buttons { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
+        button { background-color: #007bff; color: white; border: none; padding: 10px 15px; font-size: 0.95rem; border-radius: 5px; cursor: pointer; transition: 0.3s; font-family: inherit; font-weight: bold; }
+        button:hover:not(:disabled) { background-color: #0056b3; }
+        button.secondary { background-color: #6c757d; }
+        button.secondary:hover:not(:disabled) { background-color: #545b62; }
+        button.success { background-color: #28a745; }
+        button.success:hover:not(:disabled) { background-color: #218838; }
+        button.warning { background-color: #ffc107; color: #212529; }
+        button.warning:hover:not(:disabled) { background-color: #e0a800; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        #terminal-container { width: 100%; height: 450px; border-radius: 5px; overflow: hidden; background: #1e1e1e; padding: 10px; box-sizing: border-box; direction: ltr; }
+        .note { font-size: 0.85rem; color: #666; margin-top: 15px; padding: 10px; background: #fff3cd; border-right: 4px solid #ffecb5; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <p style="margin:0 0 8px;"><a href="../" style="color:#007bff;text-decoration:none;">← العودة إلى الصفحة الرئيسية</a></p>
+        <h1>المطور: بوابة أوامر WebUSB الذكية (إصدار V8 المتكامل)</h1>
+        <div class="buttons">
+            <button id="connect-btn">توصيل الجهاز</button>
+            <button id="disconnect-btn" class="secondary" disabled>فصل الجهاز</button>
+            <button id="log-btn" class="success" disabled>💾 حفظ السجل محلياً</button>
+            <button id="log-close-btn" class="secondary" style="display:none;">إنهاء الحفظ</button>
+            <button id="ai-btn" class="warning" disabled>🤖 تحليل الأخطاء (AI)</button>
+        </div>
+        <div id="terminal-container"></div>
+        <div class="note">
+            <strong>تحديث V8:</strong> 
+            تم تحديث الكود وتكامل ملف <code>README.md</code> ليشمل كافة متطلبات التشغيل، المتصفحات المدعومة، تخصيص المنافذ، وتنبيهات التبويبات المخفية.
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
