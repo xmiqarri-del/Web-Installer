@@ -1,3 +1,34 @@
+// ---------- بوابة المطور: Terminal WebUSB داخل نفس الصفحة ----------
+// قاعدة واحدة: جهاز واحد مفتوح في كل لحظة. عند الدخول إلى #developer يُغلق اتصال المثبّت أولاً،
+// وعند الخروج يُغلق اتصال الترمينال وملف السجل. مكتبة xterm تُحمَّل عند أول فتح فقط.
+
+const devSection = document.getElementById("developer");
+const devNavLink = document.getElementById("navDeveloper");
+const DEV_HASH = "#developer";
+let devController = null;   // { stop } بعد بناء الترمينال
+let devMounting = null;     // Promise لمنع البناء المزدوج
+let devWasOpen = false;     // هل كانت بوابة المطور مفتوحة في آخر تبديل
+let routeToken = 0;         // يمنع تداخل تبديلات متتالية
+
+function loadXterm() {
+  if (window.Terminal) return Promise.resolve();
+  if (!document.querySelector("link[data-xterm]")) {
+    const css = document.createElement("link");
+    css.rel = "stylesheet";
+    css.href = "https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.css";
+    css.dataset.xterm = "1";
+    document.head.appendChild(css);
+  }
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.js";
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("تعذّر تحميل xterm.js من CDN. تحقق من الاتصال بالإنترنت."));
+    document.head.appendChild(script);
+  });
+}
+
+function buildDeveloperTerminal() {
 // ==============================
 // إعدادات الـ USB الأساسية (عدّلها حسب جهازك)
 // ==============================
@@ -34,11 +65,11 @@ let renderTimeout = null;
 const MAX_BUFFER_SIZE = 8192; 
 
 const encoder = new TextEncoder();
-const connectBtn = document.getElementById('connect-btn');
-const disconnectBtn = document.getElementById('disconnect-btn');
-const logBtn = document.getElementById('log-btn');
-const logCloseBtn = document.getElementById('log-close-btn');
-const aiBtn = document.getElementById('ai-btn');
+const connectBtn = document.getElementById('dev-connect-btn');
+const disconnectBtn = document.getElementById('dev-disconnect-btn');
+const logBtn = document.getElementById('dev-log-btn');
+const logCloseBtn = document.getElementById('dev-log-close-btn');
+const aiBtn = document.getElementById('dev-ai-btn');
 
 // ==============================
 // 1. تهيئة Xterm.js
@@ -48,7 +79,7 @@ const term = new Terminal({
   theme: { background: '#1e1e1e', foreground: '#00ff00', cursor: '#ffaa00' }
 });
 
-term.open(document.getElementById('terminal-container'));
+term.open(document.getElementById('dev-terminal'));
 term.writeln('\x1b[1;36m[نظام V8 المتكامل]: جاهز للتشغيل والتواصل مع الأجهزة.\x1b[0m');
 term.writeln('------------------------------------------------------\r\n');
 
@@ -345,3 +376,60 @@ navigator.usb.addEventListener('disconnect', async event => {
     await closeDevice();
   }
 });
+
+  return { stop: closeDevice };
+}
+
+async function mountDeveloper() {
+  if (!devMounting) {
+    devMounting = loadXterm()
+      .then(() => buildDeveloperTerminal())
+      .catch((error) => {
+        devMounting = null;
+        const status = document.getElementById("dev-status");
+        if (status) status.textContent = error.message;
+        return null;
+      });
+  }
+  devController = await devMounting;
+}
+
+async function applyRoute() {
+  const token = ++routeToken;
+  const wantDev = location.hash === DEV_HASH;
+
+  // لا نبدّل وسط عملية تثبيت جارية في المثبّت، ونعيد المحاولة بعد قليل
+  if (wantDev && busy) {
+    setTimeout(applyRoute, 500);
+    return;
+  }
+
+  if (!wantDev && !devWasOpen) return;     // لا تغيير مطلوب في الصفحة الرئيسية
+  if (wantDev && devWasOpen && devController) return;
+
+  if (wantDev) {
+    // إغلاق اتصال المثبّت أولاً حتى يتمكن الترمينال من فتح الجهاز
+    if (adb) await disconnect();
+  } else if (devController) {
+    await devController.stop();
+  }
+  if (token !== routeToken) return;
+
+  for (const el of document.body.children) {
+    if (el === devSection || el.tagName === "HEADER" || el.tagName === "SCRIPT") continue;
+    el.hidden = wantDev;
+  }
+  devSection.hidden = !wantDev;
+  devNavLink.classList.toggle("active", wantDev);
+  document.querySelectorAll('.primary-nav a[href="#installer"]').forEach((a) => a.classList.toggle("active", !wantDev));
+  devWasOpen = wantDev;
+
+  if (wantDev) {
+    await mountDeveloper();
+    if (token !== routeToken) return;
+    window.scrollTo({ top: 0 });
+  }
+}
+
+window.addEventListener("hashchange", applyRoute);
+applyRoute();
