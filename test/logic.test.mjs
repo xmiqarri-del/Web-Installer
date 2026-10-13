@@ -8,7 +8,8 @@ const COMP = `${PKG}/${PKG}.nav.NavBarService`;
 
 // The simulated head unit, wrapped as the ctx that logic.mjs expects.
 function makeDevice(opts = {}) {
-  const unit = makeHeadUnit(opts);
+  // By default the head unit already has the release this page installs.
+  const unit = makeHeadUnit({ versionName: L.APP_VERSION, versionCode: L.EXPECTED_VERSION_CODE, ...opts });
   return { state: unit.state, ctx: { pkg: PKG, run: async (command) => unit.exec(command), log() {} } };
 }
 

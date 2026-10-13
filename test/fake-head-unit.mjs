@@ -9,7 +9,9 @@ export function makeHeadUnit(opts = {}) {
     sdk: opts.sdk ?? 33,
     model: opts.model ?? "JetourG700",
     installed: opts.installed ?? true,
-    version: { name: opts.versionName ?? "1.1.8", code: opts.versionCode ?? 10 },
+    // No built-in default: callers pass the release under test (makeDevice in logic.test.mjs, fakeModules in
+    // browser-fakes.mjs). A pinned number here went stale on every new release and failed the release sync.
+    version: { name: opts.versionName, code: opts.versionCode },
     installFailure: opts.installFailure ?? null,   // e.g. "INSTALL_FAILED_UPDATE_INCOMPATIBLE"
     appops: { ...(opts.appops ?? {}) },
     settings: {
