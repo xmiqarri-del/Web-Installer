@@ -3,16 +3,16 @@
 // and inlines this file into the single HTML page.
 
 export const DEFAULT_PACKAGE = "com.xmiqarri.cardisplayz";
-export const APP_VERSION = "1.1.7";
+export const APP_VERSION = "1.1.8";
 export const MIN_SDK = 30;      // Android 11 (minSdk in app/build.gradle.kts)
 export const NOTIFY_SDK = 33;   // POST_NOTIFICATIONS is a runtime permission from Android 13
 
 // The official APK of the release above. The values come from the release's update.json,
 // and the APK itself was downloaded and its SHA-256 checked against them.
-export const EXPECTED_VERSION_CODE = 9;
+export const EXPECTED_VERSION_CODE = 10;
 export const EXPECTED_APK_NAME = `Car_DisplayZ-v${APP_VERSION}.apk`;
-export const EXPECTED_APK_BYTES = 7009813;
-export const EXPECTED_APK_SHA256 = "b5b1f6acc5c9f300f7451522cd0e0ffd548da17d19575c4d59652c888618730a";
+export const EXPECTED_APK_BYTES = 7016753;
+export const EXPECTED_APK_SHA256 = "04aed69855cea4ce3d5fa34cabd8ebf00c6dde8a83f38b009dedb7c89b77fb81";
 export const RELEASE_APK_URL = `https://github.com/xmiqarri-del/Car_DisplayZ/releases/download/v${APP_VERSION}/${EXPECTED_APK_NAME}`;
 export const MAX_APK_BYTES = 200 * 1024 * 1024;  // same limit as the app's own updater
 // Fixed scratch path on the head unit for the APK being installed (never built from user input).
@@ -141,7 +141,7 @@ export function parsePmResult(output) {
   return { ok: false, code: m ? m[1] : null };
 }
 
-// From `dumpsys package`: "    versionCode=9 minSdk=30 ..." and "    versionName=1.1.7".
+// From `dumpsys package`: "    versionCode=10 minSdk=30 ..." and "    versionName=1.1.8".
 export function parseVersion(dumpsysOutput) {
   const text = String(dumpsysOutput ?? "");
   const name = /^\s*versionName=(\S+)/m.exec(text);
@@ -595,7 +595,7 @@ export const ERROR_RULES = [
     title: "التطبيق المثبّت لا يطلب هذه الصلاحية",
     steps: [
       "الصلاحية لا تُمنح إلا إذا أعلنها التطبيق في AndroidManifest.xml، فلا يمكن منحها من الكمبيوتر.",
-      "ثبّت الملف من القسم 1 في القائمة الجانبية (الإصدار 1.1.7 يعلن صلاحية الإشعارات)، ثم أعد التشخيص.",
+      "ثبّت الملف من القسم 1 في القائمة الجانبية (الإصدار 1.1.8 يعلن صلاحية الإشعارات)، ثم أعد التشخيص.",
     ],
   },
   {
