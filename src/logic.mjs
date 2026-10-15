@@ -727,9 +727,10 @@ export function buildInstallBat({ pkg, version, apkName, apkUrl }) {
     "if errorlevel 1 goto :install_failed",
     "echo.",
     "echo جاري منح الصلاحيات الأساسية...",
-    "\"%ADB%\" shell appops set %PKG% SYSTEM_ALERT_WINDOW allow",
-    "\"%ADB%\" shell appops set %PKG% REQUEST_INSTALL_PACKAGES allow",
-    "\"%ADB%\" shell dumpsys deviceidle whitelist +%PKG%",
+    // Same permission set as the page's "منح الصلاحيات للمحدد" button (appops first, then pm grant).
+    ...SELECTED_APPOPS.map((op) => `"%ADB%" shell appops set %PKG% ${op} allow >nul 2>&1`),
+    ...SELECTED_RUNTIME_PERMISSIONS.map((perm) => `"%ADB%" shell pm grant %PKG% ${perm} >nul 2>&1`),
+    "\"%ADB%\" shell dumpsys deviceidle whitelist +%PKG% >nul 2>&1",
     "echo.",
     "echo ملاحظة: خدمة الشريط السفلي تُفعَّل من الصفحة (WebInstaller) حتى لا تُمسح الخدمات الأخرى.",
     "echo تم. افتح التطبيق على الشاشة وتحقق من الزر العائم.",

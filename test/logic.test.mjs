@@ -213,6 +213,8 @@ test("install .bat uses CRLF, valid labels and never overwrites the accessibilit
   assert.ok(bat.includes("install -r"));
   assert.ok(bat.includes("dumpsys deviceidle whitelist +%PKG%"));
   assert.ok(bat.includes("SYSTEM_ALERT_WINDOW allow"));
+  for (const op of L.SELECTED_APPOPS) assert.ok(bat.includes(`appops set %PKG% ${op} allow`), `appops ${op} missing`);
+  for (const perm of L.SELECTED_RUNTIME_PERMISSIONS) assert.ok(bat.includes(`pm grant %PKG% ${perm}`), `pm grant ${perm} missing`);
 });
 
 // ---------- Permission doctor and fixes (against the simulated device) ----------
