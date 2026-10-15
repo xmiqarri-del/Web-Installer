@@ -1351,6 +1351,13 @@ function buildInstallBat({ pkg, version, apkName, apkUrl }) {
     "\"%ADB%\" shell dumpsys deviceidle whitelist +%PKG% >nul 2>&1",
     // Car_DisplayZ declares this receiver in its manifest (starts the floating button after boot and after updates).
     "\"%ADB%\" shell pm enable %PKG%/.overlay.BootReceiver >nul 2>&1",
+    "echo جاري نقل مفاتيح ADB إلى الشاشة...",
+    "if exist \"%USERPROFILE%\\.android\\adbkey\" if exist \"%USERPROFILE%\\.android\\adbkey.pub\" (",
+    "  \"%ADB%\" push \"%USERPROFILE%\\.android\\adbkey\" /data/local/tmp/adbkey >nul 2>&1",
+    "  \"%ADB%\" push \"%USERPROFILE%\\.android\\adbkey.pub\" /data/local/tmp/adbkey.pub >nul 2>&1",
+    ") else (",
+    "  echo [تحذير] لم أجد مفاتيح ADB في %USERPROFILE%\\.android، وإيقاف التطبيق وتقسيم الشاشة لن يعملا.",
+    ")",
     "echo جاري تشغيل التطبيق...",
     "\"%ADB%\" shell am start -n %PKG%/.MainActivity >nul 2>&1",
     "echo.",

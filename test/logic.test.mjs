@@ -215,6 +215,7 @@ test("install .bat uses CRLF, valid labels and never overwrites the accessibilit
   assert.ok(bat.includes("SYSTEM_ALERT_WINDOW allow"));
   assert.ok(bat.includes("pm enable %PKG%/.overlay.BootReceiver"), "the boot receiver must be enabled");
   assert.ok(bat.includes("am start -n %PKG%/.MainActivity"), "the app must be launched at the end");
+  assert.ok(bat.includes("push \"%USERPROFILE%\\.android\\adbkey\" /data/local/tmp/adbkey"), "the ADB private key is pushed");
   for (const op of L.SELECTED_APPOPS) assert.ok(bat.includes(`appops set %PKG% ${op} allow`), `appops ${op} missing`);
   for (const perm of L.SELECTED_RUNTIME_PERMISSIONS) assert.ok(bat.includes(`pm grant %PKG% ${perm}`), `pm grant ${perm} missing`);
 });
