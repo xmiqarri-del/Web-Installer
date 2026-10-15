@@ -599,8 +599,9 @@ async function uninstallSelected() {
   await loadUserApps();
 }
 
-// Grants the overlay permission to the checked apps only, one after another, and reports each result.
-async function grantOverlaySelected() {
+// Grants the full permission set to the checked apps only, one app after another, then one command after another.
+// Each command reports on its own, so a permission the app never requested does not stop the rest.
+async function grantSelected() {
   if (!requireConnection()) return;
   const picked = [...$("userApps").querySelectorAll("input[type=checkbox]:checked")].map((c) => c.value);
   if (picked.length === 0) {
@@ -608,17 +609,24 @@ async function grantOverlaySelected() {
     return;
   }
   const names = picked.map((p) => `- ${p}`).join("\n");
-  if (!confirm(`تحذير أمني: سيسمح هذا للتطبيقات التالية بالظهور فوق الشاشة، ويمكن استغلال ذلك في خداع المستخدم بصرياً:\n${names}\n\nمتابعة؟`)) {
+  const perms = [...SELECTED_APPOPS, ...SELECTED_RUNTIME_PERMISSIONS].map((p) => p.replace("android.permission.", "").replace("android.car.permission.", "")).join("، ");
+  if (!confirm(`تحذير أمني: سيُمنح كل تطبيق من التطبيقات التالية صلاحيات واسعة، منها الظهور فوق الشاشة والموقع والمستشعرات وبيانات السيارة:\n${names}\n\nالصلاحيات: ${perms}\n\nمتابعة؟`)) {
     out("ألغيت العملية. لم تُمنح أي صلاحية.", "warn");
     return;
   }
-  let ok = 0;
-  for (const p of picked) {
-    const r = await runShell(cmd.appopsSet(p, "SYSTEM_ALERT_WINDOW", "allow"), { quiet: true });
-    if (r.ok) ok += 1;
-    out(`${p}: ${r.ok ? "تم" : "فشل"}`, r.ok ? "" : "err");
+  let failedApps = 0;
+  for (const pkg of picked) {
+    let ok = 0;
+    let failed = 0;
+    for (const command of grantPlanCommands(pkg)) {
+      const r = await runShell(command, { quiet: true });
+      if (r.ok) ok += 1;
+      else failed += 1;
+    }
+    if (failed > 0) failedApps += 1;
+    out(`${pkg}: ${ok} تم، ${failed} لم يُمنح (غالباً لأن التطبيق لا يطلبها).`, failed > 0 ? "warn" : "ok");
   }
-  out(`انتهى: ${ok} من ${picked.length} تطبيق.`, ok === picked.length ? "ok" : "warn");
+  out(`انتهى: ${picked.length - failedApps} من ${picked.length} تطبيق بلا أخطاء.`, failedApps === 0 ? "ok" : "warn");
 }
 
 async function grantAllFiles() {
@@ -840,7 +848,7 @@ $("btnBat").addEventListener("click", downloadBat);
 $("btnDecode").addEventListener("click", decode);
 $("btnListApps").addEventListener("click", () => exclusive(loadUserApps));
 $("btnUninstall").addEventListener("click", () => exclusive(uninstallSelected));
-$("btnGrantOverlaySelected").addEventListener("click", () => exclusive(grantOverlaySelected));
+$("btnGrantOverlaySelected").addEventListener("click", () => exclusive(grantSelected));
 $("btnStorage").addEventListener("click", () => exclusive(grantAllFiles));
 $("btnSetHome").addEventListener("click", () => exclusive(setHomeLauncher));
 $("btnSendCmd").addEventListener("click", sendManual);
