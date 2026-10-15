@@ -94,6 +94,7 @@ export const SELECTED_RUNTIME_PERMISSIONS = [
   "android.permission.RECEIVE_BOOT_COMPLETED",
   "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
   "android.permission.REBOOT",
+  "android.permission.POST_NOTIFICATIONS",
 ];
 
 // Every command granted to one app, in order: battery-optimisation exemption, appops, then runtime permissions.
