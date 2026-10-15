@@ -435,7 +435,7 @@ test("'grant permissions to selected apps' asks first, then grants only the chec
   const hu = await headUnit(page);
   assert.equal(hu.appops[`com.waze|SYSTEM_ALERT_WINDOW`], "allow");
   assert.equal(hu.appops[`${PKG}|SYSTEM_ALERT_WINDOW`], undefined, "an unchecked app must not be granted");
-  assert.ok(hu.commands.includes("pm grant com.waze android.car.permission.CAR_SPEED"), "car permissions are part of the grant");
+  assert.ok(hu.commands.includes("pm grant com.waze android.permission.CAMERA"), "car permissions are part of the grant");
   assert.ok(hu.commands.includes("dumpsys deviceidle whitelist +com.waze"), "battery exemption is part of the grant");
   assert.equal(hu.commands.some((c) => c.includes(` ${PKG} `) || c.endsWith(` ${PKG}`)), false, "an unchecked app must get no command");
 }));

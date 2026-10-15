@@ -56,7 +56,7 @@ export const cmd = {
   setHome: (component) => `cmd package set-home-activity ${component}`,
 };
 
-// Permissions granted to each selected user app, in order. Taken from the install script:
+// Permissions granted to each selected user app, in order. Taken from the DisplayMirror manifest (no car permissions):
 // special ones through appops, runtime ones through pm grant. A permission the app never requested is
 // simply refused by Android, so each step reports its own result instead of failing the whole app.
 export const SELECTED_APPOPS = [
@@ -72,19 +72,28 @@ export const SELECTED_RUNTIME_PERMISSIONS = [
   "android.permission.ACCESS_FINE_LOCATION",
   "android.permission.ACCESS_COARSE_LOCATION",
   "android.permission.HIGH_SAMPLING_RATE_SENSORS",
-  "android.car.permission.CAR_SPEED",
-  "android.car.permission.CAR_ENERGY",
-  "android.car.permission.CAR_ENGINE_DETAILED",
-  "android.car.permission.CAR_POWERTRAIN",
-  "android.car.permission.CAR_TIRES",
-  "android.car.permission.CAR_INFO",
-  "android.car.permission.CAR_EXTERIOR_ENVIRONMENT",
-  "android.car.permission.CAR_MILEAGE",
-  "android.car.permission.CAR_VENDOR_EXTENSION",
-  "android.car.permission.CAR_DYNAMICS_STATE",
-  "android.car.permission.CONTROL_CAR_CLIMATE",
-  "android.car.permission.READ_CAR_DISPLAY_UNITS",
-  "android.car.permission.CAR_DRIVING_STATE",
+  "android.permission.CAMERA",
+  "android.permission.RECORD_AUDIO",
+  "android.permission.MODIFY_AUDIO_SETTINGS",
+  "android.permission.BLUETOOTH_CONNECT",
+  "android.permission.BLUETOOTH_ADVERTISE",
+  "android.permission.BLUETOOTH_SCAN",
+  "android.permission.BLUETOOTH",
+  "android.permission.BLUETOOTH_ADMIN",
+  "android.permission.ACCESS_WIFI_STATE",
+  "android.permission.ACCESS_NETWORK_STATE",
+  "android.permission.CHANGE_WIFI_MULTICAST_STATE",
+  "android.permission.INTERNET",
+  "android.permission.WAKE_LOCK",
+  "android.permission.FOREGROUND_SERVICE",
+  "android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION",
+  "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+  "android.permission.USE_EXACT_ALARM",
+  "android.permission.QUERY_ALL_PACKAGES",
+  "android.permission.KILL_BACKGROUND_PROCESSES",
+  "android.permission.RECEIVE_BOOT_COMPLETED",
+  "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
+  "android.permission.REBOOT",
 ];
 
 // Every command granted to one app, in order: battery-optimisation exemption, appops, then runtime permissions.
