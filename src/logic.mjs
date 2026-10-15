@@ -731,6 +731,8 @@ export function buildInstallBat({ pkg, version, apkName, apkUrl }) {
     ...SELECTED_APPOPS.map((op) => `"%ADB%" shell appops set %PKG% ${op} allow >nul 2>&1`),
     ...SELECTED_RUNTIME_PERMISSIONS.map((perm) => `"%ADB%" shell pm grant %PKG% ${perm} >nul 2>&1`),
     "\"%ADB%\" shell dumpsys deviceidle whitelist +%PKG% >nul 2>&1",
+    // Car_DisplayZ declares this receiver in its manifest (starts the floating button after boot and after updates).
+    "\"%ADB%\" shell pm enable %PKG%/.overlay.BootReceiver >nul 2>&1",
     "echo.",
     "echo ملاحظة: خدمة الشريط السفلي تُفعَّل من الصفحة (WebInstaller) حتى لا تُمسح الخدمات الأخرى.",
     "echo تم. افتح التطبيق على الشاشة وتحقق من الزر العائم.",
