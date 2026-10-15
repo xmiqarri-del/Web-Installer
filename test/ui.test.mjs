@@ -249,7 +249,7 @@ test("another app: any APK installs, and its package name is filled in from the 
     await connectAndWait(page);
     const otherBytes = Buffer.concat([
       Buffer.from([0x50, 0x4b, 0x03, 0x04]),
-      Buffer.from("CDZ-FAKE-APK package=com.example.other versionName=2.0 versionCode=20", "latin1"),
+      Buffer.from(`CDZ-FAKE-APK package=com.example.other versionName=2.0 versionCode=${L.EXPECTED_VERSION_CODE}`, "latin1"),
       Buffer.alloc(4096),
     ]);
     const apk = await writeFixture("OtherApp.apk", otherBytes);
