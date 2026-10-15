@@ -412,20 +412,29 @@ test("the adb shell box refuses while disconnected and runs commands once connec
   assert.equal(await page.inputValue("#cmdInput"), "");
 }));
 
-test("'overlay for all apps' asks first and touches only third-party packages", () => withPage({}, async (page) => {
+test("'overlay for selected apps' asks first, then grants only the checked apps one by one", () => withPage({}, async (page) => {
   await connectAndWait(page);
+  await page.click("#btnListApps");
+  await waitUntil(async () => (await page.locator("#userApps input[type=checkbox]").count()) === 2, "two user apps listed");
+
+  await page.click("#btnGrantOverlaySelected");
+  await waitForText(page, "#terminal", "حدّد تطبيقاً واحداً على الأقل من القائمة.");
+  const none = await headUnit(page);
+  assert.equal(none.commands.some((c) => c.startsWith("appops set")), false, "nothing selected must change nothing");
+
+  await page.locator(".app-row", { hasText: "com.waze" }).locator("input").check();
   page.once("dialog", (d) => d.dismiss());
-  await page.click("#btnGrantAllOverlay");
-  await sleep(300);
+  await page.click("#btnGrantOverlaySelected");
+  await waitForText(page, "#terminal", "ألغيت العملية. لم تُمنح أي صلاحية.");
   const declined = await headUnit(page);
   assert.equal(declined.commands.some((c) => c.startsWith("appops set")), false, "a dismissed warning must change nothing");
 
   page.once("dialog", (d) => d.accept());
-  await page.click("#btnGrantAllOverlay");
-  await waitForText(page, "#terminal", "انتهى: 2 تطبيق.");
+  await page.click("#btnGrantOverlaySelected");
+  await waitForText(page, "#terminal", "انتهى: 1 من 1 تطبيق.");
   const hu = await headUnit(page);
   assert.equal(hu.appops[`com.waze|SYSTEM_ALERT_WINDOW`], "allow");
-  assert.equal(hu.appops[`${PKG}|SYSTEM_ALERT_WINDOW`], "allow");
+  assert.equal(hu.appops[`${PKG}|SYSTEM_ALERT_WINDOW`], undefined, "an unchecked app must not be granted");
 }));
 
 test("older head units without shell v2 still get a full diagnosis", () => withPage(

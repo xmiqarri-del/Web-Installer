@@ -599,20 +599,26 @@ async function uninstallSelected() {
   await loadUserApps();
 }
 
-async function grantOverlayToAll() {
+// Grants the overlay permission to the checked apps only, one after another, and reports each result.
+async function grantOverlaySelected() {
   if (!requireConnection()) return;
-  if (!confirm("تحذير أمني: سيسمح هذا لكل تطبيق ثبّتَه بالظهور فوق الشاشة. يمكن استغلال هذا في خداع المستخدم بصرياً.\nلن تتأثر تطبيقات النظام.\n\nمتابعة؟")) return;
-  const listed = await runShell(cmd.listUserPackages(), { quiet: true });
-  if (!listed.ok) {
-    out("تعذّر قراءة قائمة التطبيقات.", "err");
+  const picked = [...$("userApps").querySelectorAll("input[type=checkbox]:checked")].map((c) => c.value);
+  if (picked.length === 0) {
+    out("حدّد تطبيقاً واحداً على الأقل من القائمة.", "warn");
     return;
   }
-  const packages = parsePackageList(listed.stdout);
-  for (const p of packages) {
+  const names = picked.map((p) => `- ${p}`).join("\n");
+  if (!confirm(`تحذير أمني: سيسمح هذا للتطبيقات التالية بالظهور فوق الشاشة، ويمكن استغلال ذلك في خداع المستخدم بصرياً:\n${names}\n\nمتابعة؟`)) {
+    out("ألغيت العملية. لم تُمنح أي صلاحية.", "warn");
+    return;
+  }
+  let ok = 0;
+  for (const p of picked) {
     const r = await runShell(cmd.appopsSet(p, "SYSTEM_ALERT_WINDOW", "allow"), { quiet: true });
+    if (r.ok) ok += 1;
     out(`${p}: ${r.ok ? "تم" : "فشل"}`, r.ok ? "" : "err");
   }
-  out(`انتهى: ${packages.length} تطبيق.`, "ok");
+  out(`انتهى: ${ok} من ${picked.length} تطبيق.`, ok === picked.length ? "ok" : "warn");
 }
 
 async function grantAllFiles() {
@@ -834,7 +840,7 @@ $("btnBat").addEventListener("click", downloadBat);
 $("btnDecode").addEventListener("click", decode);
 $("btnListApps").addEventListener("click", () => exclusive(loadUserApps));
 $("btnUninstall").addEventListener("click", () => exclusive(uninstallSelected));
-$("btnGrantAllOverlay").addEventListener("click", () => exclusive(grantOverlayToAll));
+$("btnGrantOverlaySelected").addEventListener("click", () => exclusive(grantOverlaySelected));
 $("btnStorage").addEventListener("click", () => exclusive(grantAllFiles));
 $("btnSetHome").addEventListener("click", () => exclusive(setHomeLauncher));
 $("btnSendCmd").addEventListener("click", sendManual);
