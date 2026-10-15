@@ -68,6 +68,7 @@ export const SELECTED_APPOPS = [
 export const SELECTED_RUNTIME_PERMISSIONS = [
   "android.permission.READ_EXTERNAL_STORAGE",
   "android.permission.WRITE_EXTERNAL_STORAGE",
+  "android.permission.SYSTEM_ALERT_WINDOW",
   "android.permission.ACCESS_FINE_LOCATION",
   "android.permission.ACCESS_COARSE_LOCATION",
   "android.permission.HIGH_SAMPLING_RATE_SENSORS",
@@ -733,6 +734,8 @@ export function buildInstallBat({ pkg, version, apkName, apkUrl }) {
     "\"%ADB%\" shell dumpsys deviceidle whitelist +%PKG% >nul 2>&1",
     // Car_DisplayZ declares this receiver in its manifest (starts the floating button after boot and after updates).
     "\"%ADB%\" shell pm enable %PKG%/.overlay.BootReceiver >nul 2>&1",
+    "echo جاري تشغيل التطبيق...",
+    "\"%ADB%\" shell am start -n %PKG%/.MainActivity >nul 2>&1",
     "echo.",
     "echo ملاحظة: خدمة الشريط السفلي تُفعَّل من الصفحة (WebInstaller) حتى لا تُمسح الخدمات الأخرى.",
     "echo تم. افتح التطبيق على الشاشة وتحقق من الزر العائم.",
