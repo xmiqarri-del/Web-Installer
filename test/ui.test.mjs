@@ -412,7 +412,7 @@ test("the adb shell box refuses while disconnected and runs commands once connec
   assert.equal(await page.inputValue("#cmdInput"), "");
 }));
 
-test("'overlay for selected apps' asks first, then grants only the checked apps one by one", () => withPage({}, async (page) => {
+test("'grant permissions to selected apps' asks first, then grants only the checked apps, one command after another", () => withPage({}, async (page) => {
   await connectAndWait(page);
   await page.click("#btnListApps");
   await waitUntil(async () => (await page.locator("#userApps input[type=checkbox]").count()) === 2, "two user apps listed");
@@ -431,10 +431,13 @@ test("'overlay for selected apps' asks first, then grants only the checked apps 
 
   page.once("dialog", (d) => d.accept());
   await page.click("#btnGrantOverlaySelected");
-  await waitForText(page, "#terminal", "انتهى: 1 من 1 تطبيق.");
+  await waitForText(page, "#terminal", "انتهى: 1 من 1 تطبيق بلا أخطاء.");
   const hu = await headUnit(page);
   assert.equal(hu.appops[`com.waze|SYSTEM_ALERT_WINDOW`], "allow");
   assert.equal(hu.appops[`${PKG}|SYSTEM_ALERT_WINDOW`], undefined, "an unchecked app must not be granted");
+  assert.ok(hu.commands.includes("pm grant com.waze android.car.permission.CAR_SPEED"), "car permissions are part of the grant");
+  assert.ok(hu.commands.includes("dumpsys deviceidle whitelist +com.waze"), "battery exemption is part of the grant");
+  assert.equal(hu.commands.some((c) => c.includes(` ${PKG} `) || c.endsWith(` ${PKG}`)), false, "an unchecked app must get no command");
 }));
 
 test("older head units without shell v2 still get a full diagnosis", () => withPage(
