@@ -45,4 +45,25 @@ The **"ADB Configuration"** section allows selecting firmware versions `3.30–3
 5. Click **Install APK on Screen** and select the file. If the file doesn't match the official release version, the page will prompt you before proceeding.
 6. Click **Run Permissions Diagnostics**, then **Auto-Fix All Issues** if necessary.
 7. To uninstall an app: Click **Refresh List** in Section 3, select the apps, click **Uninstall Selected from Screen**, and confirm.
-8. To install another app: Click **Select APK for
+8. To install another app: Click **Select APK for another app** in Section 1b and choose your file. The package name will automatically appear in the package field after installation.
+
+---
+
+## 🔒 Security & Privacy
+
+- **No Auto-Downloads**: The tool never downloads files automatically; you explicitly choose the app file from your computer.
+- **Permanent Deletions**: Deletions from Section 3 are permanent on the head unit (app and data are wiped, and the page cannot undo it). The page requests explicit confirmation showing selected app names before execution. Car_DisplayZ itself can be uninstalled, requiring a fresh APK reinstall afterward.
+- **File Integrity Checks**: Before transferring, the page verifies the file is a valid APK (ZIP header, `.apk` extension, and reasonable file size), comparing its size and SHA-256 hash against the official v1.1.11 release.
+- **Advanced Tools**: High-risk capabilities (such as granting all-files access to a specific app) include explicit warning prompts before execution.
+- **Section 3 - Grant Permissions**: The "Grant Permissions to Selected" button grants full manifest permissions to selected apps one by one, post-warning.
+- **BAT Script**: The optional Windows batch script (`.bat`) requires `adb.exe`, but it is completely optional if you install the app directly through the browser.
+
+---
+
+## 🛠️ Development
+
+```bash
+npm install
+npx playwright install chromium
+npm run build      # Generates index.html from the src folder
+npm test           # Runs logic and browser tests
