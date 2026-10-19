@@ -631,7 +631,8 @@ const EXPECTED_APK_BYTES = 18253454;
 const EXPECTED_APK_SHA256 = "9e932cf46bc854499cc9b2a63b4f3f45198681c54e0c121c7960dd0fcb54f410";
 // RELEASE:END
 const EXPECTED_APK_NAME = `Car_DisplayZ-v${APP_VERSION}.apk`;
-const RELEASE_APK_URL = `https://github.com/xmiqarri-del/Car_DisplayZ/releases/download/v${APP_VERSION}/${EXPECTED_APK_NAME}`;
+// car_DisplayZ's source repo is private; its releases are mirrored to the public displayZ-releases repo.
+const RELEASE_APK_URL = `https://github.com/xmiqarri-del/displayZ-releases/releases/download/car-v${APP_VERSION}/${EXPECTED_APK_NAME}`;
 const MAX_APK_BYTES = 200 * 1024 * 1024;  // same limit as the app's own updater
 // Fixed scratch path on the head unit for the APK being installed (never built from user input).
 const APK_TEMP_PATH = "/data/local/tmp/webinstaller_install.apk";
