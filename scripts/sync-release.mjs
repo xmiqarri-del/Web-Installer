@@ -48,23 +48,29 @@ export function applyRelease(source, { version, versionCode, bytes, sha256 }) {
   return source.slice(0, start) + block + source.slice(endLineEnd === -1 ? source.length : endLineEnd);
 }
 
-export function validateManifest(m, repo) {
+export function validateManifest(m, repo, tagPrefix) {
   if (!/^\d+\.\d+\.\d+$/.test(m.version_name ?? "")) throw new Error(`bad version_name: ${m.version_name}`);
   if (!Number.isInteger(m.version_code) || m.version_code < 1) throw new Error(`bad version_code: ${m.version_code}`);
   if (!/^[0-9a-f]{64}$/.test(m.sha256 ?? "")) throw new Error("bad sha256 in update.json");
   if (!Number.isInteger(m.size_bytes) || m.size_bytes < 1) throw new Error("bad size_bytes in update.json");
   // GitHub names are case-insensitive, so the comparison ignores case.
-  const prefix = `https://github.com/${repo}/releases/download/v${m.version_name}/`.toLowerCase();
-  if (typeof m.apk_url !== "string" || !m.apk_url.toLowerCase().startsWith(prefix)) throw new Error(`apk_url does not point at v${m.version_name} of ${repo}`);
+  const prefix = `https://github.com/${repo}/releases/download/${tagPrefix}-v${m.version_name}/`.toLowerCase();
+  if (typeof m.apk_url !== "string" || !m.apk_url.toLowerCase().startsWith(prefix)) throw new Error(`apk_url does not point at ${tagPrefix}-v${m.version_name} of ${repo}`);
   return true;
 }
 
-export async function main({ repo = process.env.CARDZ_REPO ?? "xmiqarri-del/Car_DisplayZ" } = {}) {
-  // The "latest release" link needs no API token, and it always points at the newest release's update.json.
-  const res = await fetch(`https://github.com/${repo}/releases/latest/download/update.json`);
-  if (!res.ok) throw new Error(`update.json of the latest release -> ${res.status}`);
+// car_DisplayZ's source repo is private; its public release assets (APK + update.json) are mirrored to
+// this shared repo instead, under the fixed "car-latest" tag (see xmiqarri-del/displayZ-releases).
+export async function main({
+  repo = process.env.CARDZ_REPO ?? "xmiqarri-del/displayZ-releases",
+  tag = process.env.CARDZ_TAG ?? "car-latest",
+  tagPrefix = process.env.CARDZ_TAG_PREFIX ?? "car",
+} = {}) {
+  // A fixed, pre-known tag needs no API token and is unaffected by other releases in the shared repo.
+  const res = await fetch(`https://github.com/${repo}/releases/download/${tag}/update.json`);
+  if (!res.ok) throw new Error(`update.json of ${tag} -> ${res.status}`);
   const manifest = await res.json();
-  validateManifest(manifest, repo);
+  validateManifest(manifest, repo, tagPrefix);
 
   // The APK must match update.json before the page is allowed to trust it.
   const apkRes = await fetch(manifest.apk_url);
