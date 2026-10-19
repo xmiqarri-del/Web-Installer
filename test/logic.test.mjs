@@ -85,7 +85,7 @@ test("only the official release file counts as official: size and SHA-256 must b
   assert.equal(L.isOfficialApk({ size: L.EXPECTED_APK_BYTES, sha256: null }), false, "a hash that could not be computed is not a match");
   assert.equal(L.isOfficialApk({ size: L.EXPECTED_APK_BYTES, sha256: "0".repeat(64) }), false);
   assert.equal(L.isOfficialApk({ size: 1, sha256: L.EXPECTED_APK_SHA256 }), false);
-  assert.equal(L.RELEASE_APK_URL, `https://github.com/xmiqarri-del/Car_DisplayZ/releases/download/v${L.APP_VERSION}/Car_DisplayZ-v${L.APP_VERSION}.apk`);
+  assert.equal(L.RELEASE_APK_URL, `https://github.com/xmiqarri-del/displayZ-releases/releases/download/car-v${L.APP_VERSION}/Car_DisplayZ-v${L.APP_VERSION}.apk`);
 });
 
 test("pm install and pm uninstall print Success or a Failure code", () => {
