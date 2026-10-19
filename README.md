@@ -1,82 +1,48 @@
 # Car_DisplayZ WebInstaller
 
-أداة تعمل في المتصفح لتثبيت تطبيق Car_DisplayZ على شاشة السيارة (Android) وإصلاح صلاحياته، **وتثبيت أي تطبيق آخر بملف APK**، **دون الحاجة إلى adb.exe على الكمبيوتر**. تتصل الصفحة بالشاشة عبر USB باستخدام WebUSB.
+A browser-based tool to install the **Car_DisplayZ** application on Android car head units, fix its permissions, **install any other app via APK**, and do so **completely without needing `adb.exe` on a computer**. The page communicates with the head unit over USB using WebUSB.
 
-## ما تفعله
-https://xmiqarri-del.github.io/Web-Installer/
+🌐 **Live Demo:** [https://xmiqarri-del.github.io/Web-Installer/](https://xmiqarri-del.github.io/Web-Installer/)
 
-- **تثبيت ملف APK**: تختار ملف التطبيق الذي نزّلته من GitHub، فتنسخه الصفحة إلى الشاشة وتثبّته، ثم تقرأ رقم الإصدار المثبّت فعلاً من الشاشة للتحقق.
-- **تثبيت تطبيق آخر**: زر «اختيار ملف APK لتطبيق آخر» يقبل أي ملف `.apk`. تكتشف الأداة اسم الحزمة من التطبيقات الجديدة بعد التثبيت وتضعه في حقل اسم الحزمة. لا تُمنح أي صلاحية.
-- **واجهة رئيسية (اختياري)**: في قسم الأدوات المتقدمة، تعيين تطبيق كواجهة رئيسية للشاشة عبر `cmd package set-home-activity`، بعد التحقق من صيغة المكوّن `package/.Activity`.
-- **دليل الاستخدام**: قسم داخل الصفحة يشرح الخطوات من تفعيل تصحيح USB حتى حل المشاكل.
-- **تشخيص الصلاحيات**: تفحص الإصدار، والزر العائم، وشريط الأزرار السفلي، والتثبيت من مصادر غير معروفة، والإشعارات، والتشغيل في الخلفية، واستثناء توفير البطارية، وتتحقق من أن التطبيق فُتح مرة واحدة على الأقل (أندرويد لا يشغّل التطبيق بعد إعادة التشغيل قبل ذلك، ولا بعد الإيقاف بالإجبار)، وتشرح كل مشكلة. زر الإصلاح لهذا البند يفتح التطبيق مرة واحدة على الشاشة.
-- **إصلاح تلقائي أو فردي**: تعدّل ما يلزم فقط، وتتحقق بعد كل إصلاح. الإصلاح لا يحذف أي تطبيق أو بيانات، ولا يمسح خدمات إمكانية الوصول الأخرى.
-- **حذف تطبيقات المستخدم**: تعرض التطبيقات التي ثبّتها المستخدم على الشاشة (دون تطبيقات النظام)، فتختار ما تريد حذفه، وتحذفه مع بياناته وإعداداته بعد تأكيدك. ملف APK على الكمبيوتر لا يتأثر.
-- **مفكّك الأخطاء**: تشرح رسائل الخطأ الشائعة من ADB ومن التثبيت.
+---
 
-## تهيئة ADB من قائمة السيارة
+## 🚀 What It Does
 
-يحتوي القسم **«تهيئة ADB»** على اختيار إصدار البرنامج `3.30–3.35` أو `3.36–3.37+`، والمنطقة الزمنية، وفارق ساعة السيارة. يحسب رمزاً من ستة أرقام ويحدّث العدّ التنازلي للساعة المحلية؛ الإصدار الأقدم يعرض كود الاتصال الثابت، والإصدار الأحدث يعرض الكود المتغير نفسه.
+- **APK Installation**: Choose the app file downloaded from GitHub; the page pushes it to the head unit, installs it, and reads back the actually installed version number for verification.
+- **Custom APK Installation**: The "Select APK for another app" button accepts any `.apk` file. The tool automatically detects the package name of newly installed apps and populates the package field. No special permissions are pre-granted.
+- **Home Launcher (Optional)**: In the Advanced Tools section, sets an app as the head unit's home launcher via `cmd package set-home-activity`, after validating the `package/.Activity` component format.
+- **Usage Guide**: An in-page section walking through steps from enabling USB debugging to troubleshooting.
+- **Permissions Diagnostics**: Inspects version, floating button, bottom button bar, install from unknown sources, notifications, background execution, battery optimization exemption, and verifies that the app has been opened at least once (Android will not run apps after a reboot until opened manually, nor after a force-stop). A dedicated fix button opens the app directly on the screen.
+- **Auto or Individual Fixes**: Modifies only what is necessary and verifies after each fix. Fixes never delete apps or user data, and they do not touch other accessibility services.
+- **User App Uninstallation**: Lists user-installed apps on the head unit (excluding system apps). Select what you want to remove, and delete them along with their data and settings after confirmation. The local APK file on your computer remains unaffected.
+- **Error Decoder**: Explains common error messages from ADB and the installation process.
 
-**تنبيه مهم:** ملف `WebInstaller-master.zip` المرفق لا يحتوي على ملف ترخيص، كما يقرّ ملف اختباراته بأن قيم الرمز لم تُتحقق على سيارة حقيقية. لذلك لم تُنسخ شيفرته أو APK أو مكتبة ADB المضمّنة منه؛ أُنشئت وحدة مستقلة في `src/codegen.mjs` وأُدرجت ضمن بناء `index.html`. تطابق القيمة `391819` مع مثال الصورة لا يثبت أنها ستعمل على السيارة. طابق المنطقة والساعة وإصدار البرنامج بنفسك، ولا تغيّر إعداداً هندسياً لا تفهمه. الموقع لا يفتح القائمة ولا يفعّل ADB تلقائياً.
+---
 
-## المتطلبات
+## ⚙️ ADB Factory Menu Configuration
 
-- Google Chrome أو Microsoft Edge على الكمبيوتر. متصفحات فايرفوكس وسفاري لا تدعم WebUSB.
-- شاشة تعمل بـ Android 11 أو أحدث، وفيها خيارات المطور وتصحيح USB مفعّلة.
-- كابل USB يدعم نقل البيانات (ليس كابل شحن فقط).
-- إنترنت عند فتح الصفحة، لتحميل مكتبة ADB من jsDelivr بإصدارات ثابتة.
+The **"ADB Configuration"** section allows selecting firmware versions `3.30–3.35` or `3.36–3.37+`, time zone, and car clock offset. It calculates a 6-digit code and updates the local clock countdown. Older firmware displays a static connection code, while newer firmware displays a dynamic rolling code.
 
-## الاستخدام
+> **Important Note:** The attached `WebInstaller-master.zip` archive does not contain a license file, and testing notes confirm that code values have not been verified on a real vehicle. Therefore, its code, APK, or bundled ADB library were not copied; an independent module was built in `src/codegen.mjs` and integrated into the `index.html` build. The value `391819` matching an image example does not guarantee it will work on a real vehicle. Match the time zone, clock, and software version yourself, and do not modify engineering settings you do not understand. The website does not open menus or enable ADB automatically.
 
-1. افتح `index.html` في Chrome أو Edge.
-2. إذا لم يكن ADB مفعّلاً، افتح **تهيئة ADB**، وطابق إصدار البرنامج والمنطقة ووقت السيارة، ثم اتبع الخطوات اليدوية. الرموز إرشادية وغير مؤكدة على جهاز حقيقي.
-3. اضغط **توصيل الشاشة** واختر الجهاز من النافذة، ثم وافق على طلب تصحيح USB على شاشة السيارة واختر "السماح دائماً".
-4. اضغط **تنزيل APK** (يفتح في تبويب جديد) لتنزيل `Car_DisplayZ-v1.1.11.apk` من GitHub.
-5. اضغط **تثبيت ملف APK على الشاشة** واختر الملف. إذا لم يكن الملف هو النسخة المنشورة تسألك الصفحة قبل المتابعة.
-6. اضغط **تشخيص الصلاحيات**، ثم **إصلاح تلقائي لكل المشاكل** إذا لزم.
-7. لحذف تطبيق: اضغط **تحديث القائمة** في القسم 3، وحدّد التطبيقات، ثم **حذف المحدد من الشاشة** وأكّد.
-8. لتثبيت تطبيق آخر: اضغط **اختيار ملف APK لتطبيق آخر** في القسم 1b، واختر الملف. بعد التثبيت تظهر حزمته في حقل اسم الحزمة.
+---
 
-## الأمان
+## 📋 Requirements
 
-- الصفحة لا تنزّل شيئاً بنفسها. ملف التطبيق تختاره أنت من الكمبيوتر.
-- الحذف من القسم 3 نهائي على الشاشة: يُحذف التطبيق مع بياناته، ولا تستطيع الصفحة التراجع عنه. تطلب الصفحة تأكيداً وتذكر أسماء التطبيقات المحددة قبل التنفيذ. يمكن حذف Car_DisplayZ نفسه، وعندها تحتاج إلى تثبيته من ملف APK من جديد.
-- قبل النقل تتحقق الصفحة من أن الملف APK (ترويسة ZIP وامتداد `.apk` وحجم معقول)، وتقارن حجمه وبصمة SHA-256 مع النسخة المنشورة للإصدار 1.1.11.
-- قسم **"أدوات متقدمة"** خطير: صلاحية الوصول إلى كل الملفات لتطبيق محدد. لكل أداة تحذير قبل التنفيذ.
-- القسم 3: زر **"منح الصلاحيات للمحدد"** يمنح التطبيقات المحددة فقط الصلاحيات الكاملة من ملف التثبيت، تطبيقاً تلو الآخر، بعد تحذير.
-- ملف **BAT** (قسم "أدوات") سكربت Windows اختياري يحتاج adb.exe. لا تحتاجه إذا ثبّتّ التطبيق من الصفحة.
+- **Google Chrome or Microsoft Edge** on a computer. (Firefox and Safari do not support WebUSB).
+- A head unit running **Android 11 or newer**, with Developer Options and USB Debugging enabled.
+- A **data-capable USB cable** (charging-only cables will not work).
+- An **active internet connection** when opening the page to load the ADB library from jsDelivr with pinned stable versions.
 
-## التطوير
+---
 
-```
-npm install
-npx playwright install chromium
-npm run build      # ينتج index.html من مجلد src
-npm test           # اختبارات المنطق والمتصفح
-```
+## 🕹️ Usage
 
-- `src/template.html`: هيكل الصفحة العربية RTL مع الحفاظ على معرّفات الأزرار والوظائف.
-- `src/theme.css`: خلفية فاتحة مع شريط علوي داكن وبطاقة رئيسية مميزة بخطوط شبكية وإطارات دقيقة وحركة هادئة؛ يُضمّن تلقائياً داخل `index.html` عند البناء.
-- التخطيط يتكدس على الهاتف حتى 760px، ويبقى عمودياً حتى 979px مع توزيع أدوات مزدوج للتابلت، ثم يفصل أدوات التثبيت عن لوحة التشخيص على الشاشات الأوسع.
-- `src/logic.mjs`: منطق الفحص والإصلاح والتحليل، بلا DOM، ويُختبر في Node.
-- `src/codegen.mjs`: حساب رمز القائمة ووقت السيارة وتناقص مهلة تغيّر الرمز؛ يُضمّن مع `src/app.js` أثناء البناء.
-- `src/app.js`: واجهة الصفحة، والاتصال، ونقل الملف.
-- `test/`: محاكي لجهاز أندرويد واختبارات الحساب/الوقت، فلا تحتاج إلى شاشة حقيقية لتشغيل الاختبارات.
-
-**التحديث التلقائي للإصدار:** سير العمل `.github/workflows/sync-release.yml` يعمل كل ساعة، ويقرأ `update.json` من آخر إصدار لـ Car_DisplayZ، ويتحقق من حجم APK وبصمته SHA-256، ثم يحدّث الكتلة `RELEASE` في `src/logic.mjs` ويعيد بناء `index.html` ويشغّل الاختبارات ويدفع التغيير إلى `main`. رابط التنزيل ونص الزر يتبعان الكتلة نفسها. لتشغيله يدوياً: `npm run sync` ثم `npm run build`.
-
-## حالة الاختبار
-
-- اختبارات المنطق والمتصفح تمر، وتعمل على محاكي للشاشة.
-- لم تُجرَّب الصفحة بعد على شاشة سيارة حقيقية، ولا على Windows مع WebUSB. التجربة الفعلية هي الخطوة التالية.
-
-## 🧑‍💻 بوابة المطور
-
-تبويب **المطور** في أعلى الصفحة يفتح Terminal عبر WebUSB لإرسال واستقبال الأوامر النصية مع أي جهاز USB، مع تسجيل مباشر للسجل على القرص وتحليل الأخطاء عبر خادم ذكاء اصطناعي محلي (LM Studio).
-
-- **جهاز واحد في كل لحظة:** عند الدخول إلى المطور يُغلق اتصال الشاشة تلقائياً، وعند الرجوع يُغلق اتصال الترمينال. يجب الضغط على «توصيل» من جديد في الواجهة الجديدة.
-- **xterm.js** يُحمَّل عند أول فتح للبوابة فقط.
-- تعمل فقط في Chrome أو Edge.
-- قبل الاستخدام الفعلي، عدّل `INTERFACE_NUMBER` و`ENDPOINT_IN` و`ENDPOINT_OUT` حسب الكتيب التقني لجهازك. القيم توجد في `src/developer.js` داخل ثوابت الجهاز، وتُدمج في الصفحة عند البناء.
-- قيود: فقدان السجل عند انهيار المتصفح، وتجميد التبويبات المخفية. أبقِ النافذة في المقدمة أثناء التسجيل.
+1. Open `index.html` in Chrome or Edge.
+2. If ADB is not enabled, open **ADB Configuration**, match your firmware version, time zone, and car time, then follow the manual steps. Calculated codes are directional and unverified on physical hardware.
+3. Click **Connect Head Unit**, select your device from the browser prompt, accept the USB debugging prompt on the car screen, and check "Always allow".
+4. Click **Download APK** (opens in a new tab) to download `Car_DisplayZ-v1.1.11.apk` from GitHub.
+5. Click **Install APK on Screen** and select the file. If the file doesn't match the official release version, the page will prompt you before proceeding.
+6. Click **Run Permissions Diagnostics**, then **Auto-Fix All Issues** if necessary.
+7. To uninstall an app: Click **Refresh List** in Section 3, select the apps, click **Uninstall Selected from Screen**, and confirm.
+8. To install another app: Click **Select APK for
