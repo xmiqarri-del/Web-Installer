@@ -1,6 +1,6 @@
-# Car_DisplayZ WebInstaller
+# Car Android G700 WebInstaller
 
-A browser-based tool to install the **Car_DisplayZ** application on Android car head units, fix its permissions, **install any other app via APK**, and do so **completely without needing `adb.exe` on a computer**. The page communicates with the head unit over USB using WebUSB.
+A browser-based tool to install the **Car Android G700** application on Android car head units, fix its permissions, **install any other app via APK**, and do so **completely without needing `adb.exe` on a computer**. The page communicates with the head unit over USB using WebUSB.
 
 🌐 **Live Demo:** [https://xmiqarri-del.github.io/Web-Installer/](https://xmiqarri-del.github.io/Web-Installer/)
 
@@ -52,7 +52,7 @@ The **"ADB Configuration"** section allows selecting firmware versions `3.30–3
 ## 🔒 Security & Privacy
 
 - **No Auto-Downloads**: The tool never downloads files automatically; you explicitly choose the app file from your computer.
-- **Permanent Deletions**: Deletions from Section 3 are permanent on the head unit (app and data are wiped, and the page cannot undo it). The page requests explicit confirmation showing selected app names before execution. Car_DisplayZ itself can be uninstalled, requiring a fresh APK reinstall afterward.
+- **Permanent Deletions**: Deletions from Section 3 are permanent on the head unit (app and data are wiped, and the page cannot undo it). The page requests explicit confirmation showing selected app names before execution. Car Android G700 itself can be uninstalled, requiring a fresh APK reinstall afterward.
 - **File Integrity Checks**: Before transferring, the page verifies the file is a valid APK (ZIP header, `.apk` extension, and reasonable file size), comparing its size and SHA-256 hash against the official v1.1.11 release.
 - **Advanced Tools**: High-risk capabilities (such as granting all-files access to a specific app) include explicit warning prompts before execution.
 - **Section 3 - Grant Permissions**: The "Grant Permissions to Selected" button grants full manifest permissions to selected apps one by one, post-warning.

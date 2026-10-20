@@ -116,13 +116,40 @@ export function makeHeadUnit(opts = {}) {
     }
     if (/^dumpsys package \S+$/.test(command)) {
       if (!state.installed) return ok("");
-      const g = state.granted["android.permission.POST_NOTIFICATIONS"] ? "true" : "false";
+      // Every permission this app declares in its manifest, mirroring the real dumpsys output: each one
+      // appears with granted=true/false from install time, not only once it has been touched.
+      const DECLARED_PERMISSIONS = [
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.WRITE_SECURE_SETTINGS",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.HIGH_SAMPLING_RATE_SENSORS",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.BLUETOOTH_ADVERTISE",
+        "android.permission.BLUETOOTH_SCAN",
+        "android.permission.ACCESS_WIFI_STATE",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.CHANGE_WIFI_MULTICAST_STATE",
+        "android.permission.WAKE_LOCK",
+        "android.permission.USE_EXACT_ALARM",
+        "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+      ];
+      const permissionLines = DECLARED_PERMISSIONS
+        .map((p) => `${p}: granted=${state.granted[p] ? "true" : "false"}, flags=[ USER_SET ]\n`)
+        .join("");
       return ok(
         `    versionCode=${state.version.code} minSdk=30 targetSdk=33\n` +
         `    versionName=${state.version.name}\n` +
         `    User 0: ceDataInode=0 installed=true hidden=false suspended=false distractionFlags=0 ` +
         `stopped=${state.stopped} notLaunched=${state.notLaunched} enabled=0 instant=false virtual=false\n` +
-        `android.permission.POST_NOTIFICATIONS: granted=${g}, flags=[ USER_SET ]\n`,
+        permissionLines,
       );
     }
     if (command === "dumpsys deviceidle whitelist") {
