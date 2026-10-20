@@ -149,17 +149,21 @@ test("connect, then the doctor lists exactly the five real problems", () => with
     await connectAndWait(page);
     await waitForText(page, "#terminal", "الموديل: JetourG700");
     await runDoctor(page);
-    assert.match(await page.textContent("#summary"), /سليم: 5\s+\|\s+مشاكل: 5\s+\|\s+لا ينطبق: 0/);
-    assert.equal(await page.locator("#checks .card").count(), 10);
+    assert.match(await page.textContent("#summary"), /سليم: 5\s+\|\s+مشاكل: 9\s+\|\s+لا ينطبق: 0/);
+    assert.equal(await page.locator("#checks .card").count(), 14);
     const failing = await page.$$eval("#checks .card.st-fail strong", (els) => els.map((e) => e.textContent));
     assert.deepEqual(failing, [
       "الزر العائم (الظهور فوق التطبيقات)",
+      "صلاحيات إضافية (الشاشة الكاملة ومشاركة العرض)",
+      "صلاحية الإعدادات المقيّدة (Android 13+)",
       "شريط الأزرار السفلي (خدمة إمكانية الوصول)",
       "التثبيت من مصادر غير معروفة",
+      "صلاحية الإعدادات الآمنة (التعافي التلقائي)",
+      "صلاحيات التشغيل الأساسية (بلوتوث، كاميرا، موقع، حساسات، وغيرها)",
       "الإشعارات",
       "استثناء توفير البطارية",
     ]);
-    assert.equal(await page.locator("#checks .card button").count(), 5, "each failing check offers a fix button");
+    assert.equal(await page.locator("#checks .card button").count(), 9, "each failing check offers a fix button");
     await page.screenshot({ path: join(SHOTS, "desktop-doctor.png") });
   },
 ));
@@ -178,14 +182,19 @@ test("auto-fix needs confirmation, then repairs the head unit and keeps other ac
     page.once("dialog", (d) => d.accept());
     await page.click("#btnAutoFix");
     await waitForText(page, "#summary", "مشاكل: 0");
-    assert.match(await page.textContent("#summary"), /سليم: 10/);
+    assert.match(await page.textContent("#summary"), /سليم: 14/);
     const hu = await headUnit(page);
     assert.equal(hu.settings.enabled_accessibility_services,
       `com.other/.Svc:${PKG}/${PKG}.nav.NavBarService`);
     assert.equal(hu.settings.accessibility_enabled, "1");
     assert.equal(hu.appops[`${PKG}|SYSTEM_ALERT_WINDOW`], "allow");
     assert.equal(hu.appops[`${PKG}|REQUEST_INSTALL_PACKAGES`], "allow");
+    assert.equal(hu.appops[`${PKG}|ACCESS_RESTRICTED_SETTINGS`], "allow");
+    assert.equal(hu.appops[`${PKG}|USE_FULL_SCREEN_INTENT`], "allow");
+    assert.equal(hu.appops[`${PKG}|PROJECT_MEDIA`], "allow");
     assert.equal(hu.granted["android.permission.POST_NOTIFICATIONS"], true);
+    assert.equal(hu.granted["android.permission.WRITE_SECURE_SETTINGS"], true);
+    assert.equal(hu.granted["android.permission.CAMERA"], true, "the app's own runtime permissions are granted too");
     assert.ok(hu.whitelist.includes(PKG));
   },
 ));
@@ -197,7 +206,7 @@ test("one 'إصلاح' button fixes only its own permission", () => withPage(
     await runDoctor(page);
     page.once("dialog", (d) => d.accept());
     await page.locator("#checks .card", { hasText: "الزر العائم" }).locator("button").click();
-    await waitForText(page, "#summary", "مشاكل: 4");
+    await waitForText(page, "#summary", "مشاكل: 8");
     const hu = await headUnit(page);
     assert.equal(hu.appops[`${PKG}|SYSTEM_ALERT_WINDOW`], "allow");
     assert.equal(hu.settings.accessibility_enabled, "0", "other fixes were not touched");
@@ -218,7 +227,7 @@ test("the error decoder explains a pasted install failure", () => withPage({}, a
 test("the BAT download is Windows text with CRLF endings and the right release link", () => withPage({}, async (page) => {
   await waitForText(page, "#terminal", "تشخيص الصلاحيات");
   const [download] = await Promise.all([page.waitForEvent("download"), page.click("#btnBat")]);
-  assert.equal(download.suggestedFilename(), `Install_Car_DisplayZ_${L.APP_VERSION}.bat`);
+  assert.equal(download.suggestedFilename(), `Install_Car_Android_G700_${L.APP_VERSION}.bat`);
   const file = join(SHOTS, download.suggestedFilename());
   await download.saveAs(file);
   const bat = await readFile(file, "utf8");
@@ -445,7 +454,7 @@ test("older head units without shell v2 still get a full diagnosis", () => withP
   async (page) => {
     await connectAndWait(page);
     await runDoctor(page);
-    assert.match(await page.textContent("#summary"), /مشاكل: 5/);
+    assert.match(await page.textContent("#summary"), /مشاكل: 9/);
   },
 ));
 
