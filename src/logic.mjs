@@ -57,6 +57,32 @@ export const cmd = {
   setHome: (component) => `cmd package set-home-activity ${component}`,
 };
 
+// Runtime permissions the Car Android G700 app itself declares and needs (AdbGranter.kt RUNTIME_PERMISSIONS
+// in that repo is the source of truth — keep this list in sync with it). Distinct from
+// SELECTED_RUNTIME_PERMISSIONS below, which is a broader generic list offered for arbitrary 3rd-party
+// mirrored apps and is not specific to what this app's own manifest declares.
+export const APP_RUNTIME_PERMISSIONS = [
+  "android.permission.READ_EXTERNAL_STORAGE",
+  "android.permission.WRITE_EXTERNAL_STORAGE",
+  "android.permission.ACCESS_FINE_LOCATION",
+  "android.permission.ACCESS_COARSE_LOCATION",
+  "android.permission.HIGH_SAMPLING_RATE_SENSORS",
+  "android.permission.CAMERA",
+  "android.permission.RECORD_AUDIO",
+  "android.permission.MODIFY_AUDIO_SETTINGS",
+  "android.permission.BLUETOOTH_CONNECT",
+  "android.permission.BLUETOOTH_ADVERTISE",
+  "android.permission.BLUETOOTH_SCAN",
+  "android.permission.ACCESS_WIFI_STATE",
+  "android.permission.ACCESS_NETWORK_STATE",
+  "android.permission.CHANGE_WIFI_MULTICAST_STATE",
+  "android.permission.WAKE_LOCK",
+  "android.permission.USE_EXACT_ALARM",
+  "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
+  "android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION",
+  "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+];
+
 // Permissions granted to each selected user app, in order. (no car permissions):
 // special ones through appops, runtime ones through pm grant. A permission the app never requested is
 // simply refused by Android, so each step reports its own result instead of failing the whole app.
@@ -307,6 +333,48 @@ export const CHECKS = [
     },
   },
   {
+    id: "extra_appops",
+    title: "صلاحيات إضافية (الشاشة الكاملة ومشاركة العرض)",
+    needsApp: true,
+    async check(ctx) {
+      const fullScreen = parseAppOp((await quietRun(ctx, cmd.appopsGet(ctx.pkg, "USE_FULL_SCREEN_INTENT"))).stdout);
+      const projectMedia = parseAppOp((await quietRun(ctx, cmd.appopsGet(ctx.pkg, "PROJECT_MEDIA"))).stdout);
+      if (fullScreen === "allow" && projectMedia === "allow") {
+        return { state: "ok", value: "مسموحتان", detail: "مسموح بإشعارات الشاشة الكاملة ومشاركة العرض." };
+      }
+      return {
+        state: "fail",
+        value: `شاشة كاملة: ${fullScreen} / مشاركة العرض: ${projectMedia}`,
+        detail: "إحداها أو كلتاهما غير مسموحة. تؤثر على إشعار التحديث وعلى مرآة الشاشة الخلفية.",
+      };
+    },
+    async fix(ctx) {
+      return [
+        cmd.appopsSet(ctx.pkg, "USE_FULL_SCREEN_INTENT", "allow"),
+        cmd.appopsSet(ctx.pkg, "PROJECT_MEDIA", "allow"),
+      ];
+    },
+  },
+  {
+    id: "restricted_settings",
+    title: "صلاحية الإعدادات المقيّدة (Android 13+)",
+    needsApp: true,
+    async check(ctx) {
+      const mode = parseAppOp((await quietRun(ctx, cmd.appopsGet(ctx.pkg, "ACCESS_RESTRICTED_SETTINGS"))).stdout);
+      if (mode === "allow") {
+        return { state: "ok", value: mode, detail: "مسموحة. تفعيل شريط الأزرار يثبت بعدها." };
+      }
+      return {
+        state: "fail",
+        value: mode,
+        detail: "غير مسموحة. على أندرويد 13+ هذا يمنع ثبات تفعيل شريط الأزرار أدناه — النظام يرجّعه مغلقاً تلقائياً بدونها، حتى لو نجحت خطوة الإصلاح التالية ظاهرياً.",
+      };
+    },
+    async fix(ctx) {
+      return [cmd.appopsSet(ctx.pkg, "ACCESS_RESTRICTED_SETTINGS", "allow")];
+    },
+  },
+  {
     id: "accessibility",
     title: "شريط الأزرار السفلي (خدمة إمكانية الوصول)",
     needsApp: true,
@@ -347,6 +415,44 @@ export const CHECKS = [
     },
     async fix(ctx) {
       return [cmd.appopsSet(ctx.pkg, "REQUEST_INSTALL_PACKAGES", "allow")];
+    },
+  },
+  {
+    id: "secure_settings",
+    title: "صلاحية الإعدادات الآمنة (التعافي التلقائي)",
+    needsApp: true,
+    async check(ctx) {
+      const granted = parseGranted((await quietRun(ctx, cmd.dumpsysPackage(ctx.pkg))).stdout, "android.permission.WRITE_SECURE_SETTINGS");
+      if (granted === true) {
+        return { state: "ok", value: "ممنوحة", detail: "يقدر التطبيق يعيد تفعيل شريط الأزرار لحاله بعد إعادة تشغيل السيارة دون وصل ADB من جديد." };
+      }
+      if (granted === false) {
+        return { state: "fail", value: "غير ممنوحة", detail: "بعد إعادة تشغيل السيارة أو تحديث التطبيق، قد يحتاج شريط الأزرار إصلاحاً يدوياً من جديد عبر ADB." };
+      }
+      return { state: "info", value: "غير معروف", detail: "الصلاحية غير مذكورة في معلومات التطبيق." };
+    },
+    async fix(ctx) {
+      return [cmd.pmGrant(ctx.pkg, "android.permission.WRITE_SECURE_SETTINGS")];
+    },
+  },
+  {
+    id: "runtime_permissions",
+    title: "صلاحيات التشغيل الأساسية (بلوتوث، كاميرا، موقع، حساسات، وغيرها)",
+    needsApp: true,
+    async check(ctx) {
+      const dumpsys = (await quietRun(ctx, cmd.dumpsysPackage(ctx.pkg))).stdout;
+      const missing = APP_RUNTIME_PERMISSIONS.filter((p) => parseGranted(dumpsys, p) !== true);
+      if (missing.length === 0) {
+        return { state: "ok", value: `${APP_RUNTIME_PERMISSIONS.length}/${APP_RUNTIME_PERMISSIONS.length}`, detail: "كل الصلاحيات الأساسية ممنوحة." };
+      }
+      return {
+        state: "fail",
+        value: `${APP_RUNTIME_PERMISSIONS.length - missing.length}/${APP_RUNTIME_PERMISSIONS.length}`,
+        detail: `ناقصة: ${missing.map((p) => p.replace("android.permission.", "")).join("، ")}.`,
+      };
+    },
+    async fix(ctx) {
+      return APP_RUNTIME_PERMISSIONS.map((p) => cmd.pmGrant(ctx.pkg, p));
     },
   },
   {
@@ -710,7 +816,7 @@ export function buildInstallBat({ pkg, version, apkName, apkUrl }) {
   const lines = [
     "@echo off",
     "chcp 65001 >nul",
-    `title Car_DisplayZ Installer ${version}`,
+    `title Car Android G700 Installer ${version}`,
     "setlocal",
     `set "PKG=${pkg}"`,
     `set "APK=${apkName}"`,
@@ -722,7 +828,7 @@ export function buildInstallBat({ pkg, version, apkName, apkUrl }) {
     "set \"ADB=%LOCALAPPDATA%\\Android\\Sdk\\platform-tools\\adb.exe\"",
     ":adb_ok",
     "echo ===================================================",
-    `echo      Car_DisplayZ Installer - الإصدار ${version}`,
+    `echo      Car Android G700 Installer - الإصدار ${version}`,
     "echo ===================================================",
     "echo.",
     "\"%ADB%\" get-state >nul 2>&1",
