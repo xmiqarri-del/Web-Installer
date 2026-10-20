@@ -427,12 +427,21 @@ export const CHECKS = [
         return { state: "ok", value: "ممنوحة", detail: "يقدر التطبيق يعيد تفعيل شريط الأزرار لحاله بعد إعادة تشغيل السيارة دون وصل ADB من جديد." };
       }
       if (granted === false) {
-        return { state: "fail", value: "غير ممنوحة", detail: "بعد إعادة تشغيل السيارة أو تحديث التطبيق، قد يحتاج شريط الأزرار إصلاحاً يدوياً من جديد عبر ADB." };
+        return {
+          state: "fail",
+          value: "غير ممنوحة",
+          detail: "بعد إعادة تشغيل السيارة أو تحديث التطبيق، قد يحتاج شريط الأزرار إصلاحاً يدوياً من جديد عبر ADB. إذا استمر الفشل بعد الإصلاح، فبعض أنظمة السيارات تمنع هذه الصلاحية تحديداً على مستوى الشركة المصنّعة، ولا يوجد حل عندها غير الإصلاح اليدوي المتكرر.",
+        };
       }
       return { state: "info", value: "غير معروف", detail: "الصلاحية غير مذكورة في معلومات التطبيق." };
     },
     async fix(ctx) {
-      return [cmd.pmGrant(ctx.pkg, "android.permission.WRITE_SECURE_SETTINGS")];
+      // Android 13+ silently refuses this (and a few other settings) for a sideloaded app until
+      // this op is allowed first — even when this is the only check being fixed, not the full run.
+      return [
+        cmd.appopsSet(ctx.pkg, "ACCESS_RESTRICTED_SETTINGS", "allow"),
+        cmd.pmGrant(ctx.pkg, "android.permission.WRITE_SECURE_SETTINGS"),
+      ];
     },
   },
   {
