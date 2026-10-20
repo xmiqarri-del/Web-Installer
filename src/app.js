@@ -114,7 +114,7 @@ async function connect() {
       L.AdbDaemonTransport.authenticate({
         serial: device.serial,
         connection,
-        credentialStore: new L.CredentialStore("Car_DisplayZ WebInstaller"),
+        credentialStore: new L.CredentialStore("Car Android G700 WebInstaller"),
       }),
       AUTH_TIMEOUT_MS,
       "موافقة الشاشة",
@@ -520,7 +520,7 @@ function downloadBat() {
   const blob = new Blob([text], { type: "application/octet-stream" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = `Install_Car_DisplayZ_${APP_VERSION}.bat`;
+  link.download = `Install_Car_Android_G700_${APP_VERSION}.bat`;
   document.body.append(link);
   link.click();
   link.remove();
@@ -577,7 +577,7 @@ async function uninstallSelected() {
     return;
   }
   const own = picked.includes(DEFAULT_PACKAGE)
-    ? "\nمن بينها Car_DisplayZ نفسه: ستحتاج إلى تثبيته من ملف APK بعد ذلك.\n"
+    ? "\nمن بينها Car Android G700 نفسه: ستحتاج إلى تثبيته من ملف APK بعد ذلك.\n"
     : "";
   const names = picked.map((p) => `- ${p}`).join("\n");
   const question = `سيتم إلغاء تثبيت ${picked.length} تطبيق من الشاشة، مع بياناتها وإعداداتها:\n${names}\n${own}\nملف APK على الكمبيوتر لن يتأثر.\n\nمتابعة؟`;
@@ -633,7 +633,7 @@ async function grantAllFiles() {
   if (!requireConnection()) return;
   const pkg = currentPackage();
   if (!pkg) return;
-  if (!confirm(`سيمنح ${pkg} الوصول إلى كل ملفات الشاشة (MANAGE_EXTERNAL_STORAGE).\nهذه صلاحية واسعة: امنحها للتطبيقات الموثوقة فقط.\nتطبيق Car_DisplayZ لا يحتاجها.\n\nمتابعة؟`)) return;
+  if (!confirm(`سيمنح ${pkg} الوصول إلى كل ملفات الشاشة (MANAGE_EXTERNAL_STORAGE).\nهذه صلاحية واسعة: امنحها للتطبيقات الموثوقة فقط.\nتطبيق Car Android G700 لا يحتاجها.\n\nمتابعة؟`)) return;
   const r = await runShell(cmd.appopsSet(pkg, "MANAGE_EXTERNAL_STORAGE", "allow"));
   out(r.ok ? "تم منح الصلاحية." : "لم تنجح الصلاحية. راجع الرسالة أعلاه.", r.ok ? "ok" : "err");
 }
@@ -862,8 +862,8 @@ setConnected(false);
 }
 renderEnvironment();
 renderLog();
-out("Car_DisplayZ WebInstaller 3.1 (c) 2026 Abu Tala. All rights reserved.");
-out(`الإصدار ${APP_VERSION} من Car_DisplayZ. اضغط 'توصيل الشاشة'، ثم 'تثبيت ملف APK' أو 'تشخيص الصلاحيات'.`);
+out("Car Android G700 WebInstaller 3.1 (c) 2026 Abu Tala. All rights reserved.");
+out(`الإصدار ${APP_VERSION} من Car Android G700. اضغط 'توصيل الشاشة'، ثم 'تثبيت ملف APK' أو 'تشخيص الصلاحيات'.`);
 libReady.then((L) => {
   if (!L) out(`تنبيه: تعذّر تحميل مكتبة ADB (${libError?.message ?? "خطأ"}). الصفحة تعمل بدون اتصال، ومفكّك الأخطاء متاح.`, "warn");
 });
