@@ -8,10 +8,10 @@ export const NOTIFY_SDK = 33;   // POST_NOTIFICATIONS is a runtime permission fr
 
 // RELEASE:BEGIN — rewritten by scripts/sync-release.mjs when a new Car_DisplayZ release is published.
 // The values come from that release's update.json; the APK itself is checked against them.
-export const APP_VERSION = "1.1.41";
-export const EXPECTED_VERSION_CODE = 43;
-export const EXPECTED_APK_BYTES = 18321318;
-export const EXPECTED_APK_SHA256 = "4554d589b3a4c054a725a354419d045b2bc1cccafcf4f28d172d5b7f261dc8f5";
+export const APP_VERSION = "1.1.42";
+export const EXPECTED_VERSION_CODE = 44;
+export const EXPECTED_APK_BYTES = 19975162;
+export const EXPECTED_APK_SHA256 = "035d7a277ab7582a186a8193ee88328aa87f6142834140f188984fc52e6fadc5";
 // RELEASE:END
 export const EXPECTED_APK_NAME = `Car_DisplayZ-v${APP_VERSION}.apk`;
 // car_DisplayZ's source repo is private; its releases are mirrored to the public displayZ-releases repo.
